@@ -42,6 +42,24 @@ The codebook is applied by `frame()`, not by `responses()`: a dict has no notion
 factor, and replacing a code with its label would throw the code away. `codebook(42)`
 gives you the mapping if you want it yourself.
 
+## Image marking
+
+An image marking question (participants paint areas or set pins on a map or picture) arrives
+as the stored answer — the image, the grid, and the cells or pins. For a heatmap:
+
+```python
+import pandas as pd
+from sondavi import markings
+
+m = pd.DataFrame(markings(rows))
+m[(m.question == "map") & (m.category == "green")].groupby(["row", "col"]).size()
+```
+
+One row per painted cell or pin, with its position between 0 and 1 (`x_norm`, `y_norm`) and in
+pixels of the original image (`x_px`, `y_px`) — the same table as the platform's
+image-markings export. `unnest()` writes these questions the way the CSV export does: one field
+per marking type, cells as row runs (`"2:3-5 3:4"`), pins as `"x,y"` pairs.
+
 ## Waves of a study series
 
 ```python

@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
-from sondavi import unnest  # noqa: E402
+from sondavi import unnest, markings  # noqa: E402
 
 # The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
 # machine, and CI runners carry their own listening services.
@@ -146,8 +146,41 @@ ok("a multiple-choice answer stays one field", isinstance(rows[0].get("why"), (s
 ok("naming one field leaves the others nested",
    isinstance(unnest(rows, columns=["ratings"])[0].get("contacts"), list))
 cb_names = {v["name"] for v in cb}
-produced = {k for k in flat if k.startswith(("ratings.", "contacts."))}
+produced = {k for k in flat if k.startswith(("ratings.", "contacts.", "map.", "visits."))}
 ok("every flattened name appears in the codebook", produced <= cb_names)
+
+print("\nImage marking")
+# The API sends the stored answer (image, grid, cells or pins); unnest has to write it the way
+# the export does — one field per marking type — not as a tree of image.src, grid.cols, …
+flat_all = unnest(rows)
+ok("an area answer becomes one field per marking type", {"map.green", "map.red"} <= set(flat))
+ok("none of the stored structure leaks out as fields",
+   not any(k.startswith(("map.mode", "map.image", "map.grid", "map.cells", "visits.points")) for k in flat))
+ok("painted cells are written as row runs, like the export", flat["map.green"] == "2:3-5 3:4")
+ok("a single cell has no dash", flat["map.red"] == "6:4")
+ok("a type nobody used in this answer is absent", "map.red" not in flat_all[1])
+ok("pins are x,y pairs in the order set", flat["visits.visit"] == "0.25,0.5 0.7,0.1234")
+ok("someone who set no pins has no pin field", "visits.visit" not in flat_all[1])
+
+m = markings(rows)
+ok("the long table has one row per cell and per pin", len(m) == 4 + 1 + 1 + 2)
+ok("with the fields of the export's markings.csv", list(m[0]) == [
+    "response_id", "respondent_id", "completed_at", "question", "category",
+    "row", "col", "x_norm", "y_norm", "x_px", "y_px", "image_src"])
+cell = next(r for r in m if r["question"] == "map" and r["category"] == "green")
+ok("a cell is named by row and column, counted from 0", (cell["row"], cell["col"]) == (2, 3))
+# The centre of cell (2, 3) on a 16 x 11 grid over 1600 x 1100 px.
+ok("placed at its centre, relative to the image",
+   abs(cell["x_norm"] - 3.5 / 16) < 1e-6 and abs(cell["y_norm"] - 2.5 / 11) < 1e-6)
+ok("and in pixels of the original image", (cell["x_px"], cell["y_px"]) == (350, 250))
+pin = [r for r in m if r["question"] == "visits"][1]
+ok("a pin has no cell", pin["row"] is None and pin["col"] is None)
+ok("but both coordinates", pin["x_norm"] == 0.7 and pin["y_px"] == round(0.1234 * 1100, 2))
+ok("each row says which image it was drawn on", all(r["image_src"] == "/storage/test/TEST-map.png" for r in m))
+ok("and whose answer it is", all(r["respondent_id"] == "PNL-1" for r in m if r["question"] == "visits"))
+ok("one question can be asked for", {r["question"] for r in markings(rows, columns=["visits"])} == {"visits"})
+ok("a study without image marking gives an empty table",
+   markings([{k: v for k, v in r.items() if k not in ("map", "visits")} for r in rows]) == [])
 
 print("\nJoining waves")
 waves = con.waves([s["id"] for s in surveys[:2]], names=["w1", "w2"])

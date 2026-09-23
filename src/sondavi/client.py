@@ -13,9 +13,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone as _timezone
 from typing import Any, Iterator
 
-__all__ = ["connect", "Connection", "ApiError", "unnest"]
+__all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.2.1"
+_USER_AGENT = "sondavi-python/0.3.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -315,6 +315,11 @@ def unnest(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
     A matrix cell becomes `question.row.column`, an entry of a dynamic panel
     `question.0.field` — counting from zero, as the export does. A multiple-choice answer
     is a list of values and stays one field: there the list IS the answer.
+
+    An image marking answer becomes one field per marking type, as in the export:
+    painted cells as row runs ("12:31-40 13:30" = row 12, columns 31 to 40, and row 13,
+    column 30), pins as "x,y" pairs. For a heatmap use `markings()` instead, on the rows
+    before unnesting.
     """
     out = []
 
@@ -331,6 +336,11 @@ def unnest(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
 
 
 def _flatten_answer(value: Any, prefix: str) -> dict:
+    # An image marking is one answer with its own column rule, not a tree of fields: the
+    # export writes one column per marking type, and so does this.
+    if _is_image_marking(value):
+        return _image_marking_columns(value, prefix)
+
     if not isinstance(value, (dict, list)) or not value:
         return {prefix: value}
 
@@ -347,3 +357,128 @@ def _flatten_answer(value: Any, prefix: str) -> dict:
         flat.update(_flatten_answer(child, f"{prefix}.{key}"))
 
     return flat or {prefix: value}
+
+
+# ── Image marking ────────────────────────────────────────────────────────────────────────
+#
+# The stored answer of an image marking question carries its own image and grid:
+#   {"mode": "area", "image": {"src", "width", "height"}, "grid": {"cols", "rows"},
+#    "cells": {<category>: [<cell index>, ...]}}
+#   {"mode": "point", "image": {...}, "points": [{"x", "y", "category"}, ...]}
+# A cell index is row * cols + col, counted from 0 at the top left. The conventions are the
+# platform's (App\Support\ImageAnnotation) and must stay identical to it: a heatmap drawn
+# from the API has to agree with one drawn from the export file.
+
+_MARKING_COLUMNS = ("response_id", "respondent_id", "completed_at", "question", "category",
+                    "row", "col", "x_norm", "y_norm", "x_px", "y_px", "image_src")
+
+
+def _is_image_marking(value: Any) -> bool:
+    return (isinstance(value, dict) and value.get("mode") in ("area", "point")
+            and isinstance(value.get("image"), dict))
+
+
+def _short_number(x: Any) -> str:
+    # 0.5 rather than 0.5000 or 5e-01, like the export.
+    return f"{round(float(x), 4):.4f}".rstrip("0").rstrip(".") or "0"
+
+
+def _cell_runs(cells: list, cols: int) -> str:
+    out: list[str] = []
+    ids = sorted({int(c) for c in cells})
+    start = prev = None
+    for cell in ids + [None]:
+        # A run continues only with the right-hand neighbour in the same row.
+        if cell is not None and prev is not None and cell == prev + 1 and cell // cols == prev // cols:
+            prev = cell
+            continue
+        if start is not None:
+            row, a, b = start // cols, start % cols, prev % cols
+            out.append(f"{row}:{a}" if a == b else f"{row}:{a}-{b}")
+        start = prev = cell
+    return " ".join(out)
+
+
+def _image_marking_columns(value: dict, prefix: str) -> dict:
+    if value.get("mode") == "point":
+        by_category: dict[str, list[str]] = {}
+        for p in value.get("points") or []:
+            by_category.setdefault(str(p.get("category", "")), []).append(
+                f"{_short_number(p.get('x', 0))},{_short_number(p.get('y', 0))}")
+        return {f"{prefix}.{cat}": " ".join(pairs) for cat, pairs in by_category.items()}
+
+    cols = max(1, int((value.get("grid") or {}).get("cols") or 1))
+    return {f"{prefix}.{cat}": _cell_runs(ids or [], cols) for cat, ids in (value.get("cells") or {}).items()}
+
+
+def markings(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
+    """One row per marked cell or pin, for a heatmap.
+
+    Image marking questions arrive as the stored answer: the image it was given on, the
+    grid, and the painted cells or the pins. This turns them into the long table a heatmap
+    is drawn from — the same rows and fields as `markings.csv` in the platform's
+    image-markings export, so a script can switch between the file and the API unchanged.
+
+    Every row carries its position twice: `x_norm`/`y_norm` between 0 and 1 (left to right,
+    top to bottom), and `x_px`/`y_px` in pixels of the original image — the mapping,
+    already done. For a painted cell that is the cell's centre; `row` and `col` say which
+    cell (counted from 0 at the top left) and are None for pins. A cell covers `x_norm`
+    from `col / cols` to `(col + 1) / cols`. Nothing is aggregated.
+
+        import pandas as pd
+        m = pd.DataFrame(markings(con.responses(42)))
+        m[m.question == "map"].groupby(["row", "col"]).size()   # people per cell
+
+    `columns` limits it to some questions; default is every image marking question found.
+    `respondent_id` is included when the rows carry it.
+    """
+    found: list[str] = []
+    for row in rows:
+        for key, value in row.items():
+            if key not in found and _is_image_marking(value):
+                found.append(key)
+    targets = found if columns is None else [c for c in found if c in columns]
+    with_respondent = any("respondent_id" in r for r in rows)
+
+    out: list[dict] = []
+    for question in targets:
+        for row in rows:
+            answer = row.get(question)
+            if not _is_image_marking(answer):
+                continue
+            lead = {"response_id": row.get("response_id")}
+            if with_respondent:
+                lead["respondent_id"] = row.get("respondent_id")
+            lead["completed_at"] = row.get("completed_at")
+            lead["question"] = question
+            for mark in _image_marking_rows(answer):
+                out.append({**lead, **mark})
+
+    return out
+
+
+def _image_marking_rows(answer: dict) -> list[dict]:
+    image = answer.get("image") or {}
+    width = float(image.get("width") or 0)
+    height = float(image.get("height") or 0)
+    src = str(image.get("src") or "")
+
+    def place(category, row, col, x, y):
+        return {"category": category, "row": row, "col": col,
+                "x_norm": round(x, 6), "y_norm": round(y, 6),
+                "x_px": round(x * width, 2), "y_px": round(y * height, 2), "image_src": src}
+
+    if answer.get("mode") == "point":
+        return [place(str(p.get("category", "")), None, None, float(p.get("x", 0)), float(p.get("y", 0)))
+                for p in answer.get("points") or []]
+
+    grid = answer.get("grid") or {}
+    cols = max(1, int(grid.get("cols") or 1))
+    rows = max(1, int(grid.get("rows") or 1))
+    marks = []
+    for category, ids in (answer.get("cells") or {}).items():
+        for cell in ids or []:
+            r, c = divmod(int(cell), cols)
+            # The centre of the cell — the platform's +0.5 convention.
+            marks.append(place(category, r, c, (c + 0.5) / cols, (r + 0.5) / rows))
+    return marks

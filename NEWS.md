@@ -1,3 +1,22 @@
+# sondavi 0.3.0
+
+## Image marking questions
+
+The platform has a new question type: participants paint areas or set pins on an
+image. Its answer arrives as the stored object — the image, the grid and the cells or
+pins.
+
+* `markings()` turns these into one row per painted cell or pin, with the position
+  relative to the image and in pixels of the original — the same table as
+  `markings.csv` in the platform's image-markings export. This is what a heatmap is
+  drawn from.
+* `unnest()` writes them the way the CSV export does: one field per marking type,
+  cells as row runs (`"2:3-5 3:4"`), pins as `"x,y"` pairs. Before, it spread the
+  stored object into `map.image.src`, `map.grid.cols`, … — names the codebook does not
+  know.
+
+Same as the R package 0.3.0.
+
 # sondavi 0.2.1
 
 Test infrastructure only; the package itself is unchanged.
