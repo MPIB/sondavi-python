@@ -15,7 +15,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "unnest"]
 
-_USER_AGENT = "sondavi-python/0.2.0"
+_USER_AGENT = "sondavi-python/0.2.1"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and

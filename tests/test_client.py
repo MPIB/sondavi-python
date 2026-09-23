@@ -4,6 +4,7 @@
 Run via tests/run.sh, which starts clients/fixtures/fixture-server.py first.
 Plain asserts, no test framework — an analysis machine has none installed either."""
 
+import os
 import sys
 import time
 
@@ -21,7 +22,10 @@ from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
 from sondavi import unnest  # noqa: E402
 
-BASE = "http://127.0.0.1:8765"
+# The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
+# machine, and CI runners carry their own listening services.
+PORT = os.environ.get("SONDAVI_TEST_PORT", "8765")
+BASE = f"http://127.0.0.1:{PORT}"
 TOKEN = "sdv_" + "T" * 48
 ERASED = "00000000-0000-4000-8000-000000000001"
 NARROWED = "00000000-0000-4000-8000-000000000002"
