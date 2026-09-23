@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ['3.10', '3.13']
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Installed WITHOUT extras on purpose: the package is meant to run on the standard
+      # library alone, and the only way to know that is to install it that way. A stray
+      # `import requests` would pass every local test and fail here.
+      - run: pip install .
+
+      - run: python -c "import sondavi; print(sondavi.__name__, 'imports with no third-party packages')"
+
+      - name: The package's own checks, against recorded API answers
+        run: tests/run.sh
+        shell: bash
+
+      - name: With pandas, for frame()
+        run: |
+          pip install pandas
+          tests/run.sh
+        shell: bash
