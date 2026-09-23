@@ -30,11 +30,9 @@ jobs:
       - run: python -c "import sondavi; print(sondavi.__name__, 'imports with no third-party packages')"
 
       - name: The package's own checks, against recorded API answers
-        run: tests/run.sh
-        shell: bash
+        run: python tests/run.py
 
       - name: With pandas, for frame()
         run: |
           pip install pandas
-          tests/run.sh
-        shell: bash
+          python tests/run.py

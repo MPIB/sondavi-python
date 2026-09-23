@@ -10,8 +10,8 @@ analysis travels with it into version control, onto shared drives and into
 supplementary material. That is the usual way one leaks.
 """
 
-from .client import Connection, ApiError, connect
+from .client import Connection, ApiError, connect, unnest
 from .snapshots import Snapshot
 
-__all__ = ["connect", "Connection", "ApiError", "Snapshot"]
-__version__ = "0.1.0"
+__all__ = ["connect", "Connection", "ApiError", "Snapshot", "unnest"]
+__version__ = "0.2.0"

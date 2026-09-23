@@ -6,12 +6,20 @@ Plain asserts, no test framework — an analysis machine has none installed eith
 
 import sys
 import time
+
+# Windows' console is cp1252 by default, and the tick below is not in it: the run died with
+# a UnicodeEncodeError on exactly one of the three CI systems, which hides the cause well.
+# Printing ASCII would also work, but the output is read by people.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
+from sondavi import unnest  # noqa: E402
 
 BASE = "http://127.0.0.1:8765"
 TOKEN = "sdv_" + "T" * 48
@@ -117,6 +125,38 @@ ok("a narrowed replay still returns every recorded row", len(narrowed) == 3)
 ok("and is not mistaken for a deletion", narrowed_intact is True)
 
 ok("recorded snapshots can be listed", len(con.snapshots()) >= 1)
+
+print("\nThe fingerprint")
+line = con.fingerprint()
+ok("a line for the paper", "rows, fetched" in line and "digest" in line)
+
+print("\nNested answers")
+flat = unnest(rows)[0]
+# The names must be the platform's own, or a script written against the export file and one
+# written against the API disagree about what a variable is called.
+ok("a matrix cell becomes question.row.column", "ratings.speed.score" in flat)
+ok("with the recorded value", flat["ratings.speed.score"] == 4)
+ok("a dynamic panel entry counts from zero, as the export does", "contacts.0.who" in flat)
+ok("the nested field itself is gone", "ratings" not in flat)
+ok("a multiple-choice answer stays one field", isinstance(rows[0].get("why"), (str, type(None))))
+ok("naming one field leaves the others nested",
+   isinstance(unnest(rows, columns=["ratings"])[0].get("contacts"), list))
+cb_names = {v["name"] for v in cb}
+produced = {k for k in flat if k.startswith(("ratings.", "contacts."))}
+ok("every flattened name appears in the codebook", produced <= cb_names)
+
+print("\nJoining waves")
+waves = con.waves([s["id"] for s in surveys[:2]], names=["w1", "w2"])
+ok("one row per person seen in any wave", len(waves) == 3)
+ok("the fields carry their wave", all("mood_w1" in w for w in waves))
+ok("the join key is not suffixed", all("respondent_id" in w for w in waves))
+# The point of the full outer join: attrition is usually the thing being studied, so the
+# person who stopped answering must not quietly disappear.
+dropped = [w for w in waves if "mood_w2" not in w]
+ok("someone who skipped the second wave is kept", len(dropped) == 1)
+ok("and is recognisable by their missing wave", dropped[0]["respondent_id"] == "PNL-3")
+fails_with("one study is not a series", "at least two",
+           lambda: con.waves([surveys[0]["id"]]))
 
 print("\nPandas")
 try:

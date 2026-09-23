@@ -1,0 +1,4 @@
+# Shell-Skripte immer mit LF auschecken. Auf Windows wandelt Git sonst in CRLF, und bash
+# scheitert dann am \r hinter der Shebang -- auf genau einem der drei Systeme, was die
+# Ursache gut versteckt.
+*.sh text eol=lf

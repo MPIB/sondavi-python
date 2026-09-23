@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .client import Connection
+import warnings
+
+from .client import Connection, _with_real_dates
 
 __all__ = ["Snapshot"]
 
@@ -56,11 +58,13 @@ def _snapshots(self: Connection) -> list[Snapshot]:
     return [Snapshot._from(s) for s in self._request("GET", "snapshots")["data"]]
 
 
-def _snapshot_responses(self: Connection, snapshot_id: str) -> tuple[list[dict], bool]:
+def _snapshot_responses(self: Connection, snapshot_id: str,
+                        parse_dates: bool = True) -> tuple[list[dict], bool]:
     """The rows of a recorded set, and whether every recorded response is still there.
 
     `False` means the dataset behind a published result has changed — through
-    retention or an erasure request. That is information, not an error.
+    retention or an erasure request. That is information, not an error, and it comes
+    with a warning naming how many are missing.
 
     Deliberately NOT `meta["matches_recorded"]`: the digest covers the RENDERED
     rows, so a token that reads fewer columns than the snapshot was recorded with
@@ -68,7 +72,34 @@ def _snapshot_responses(self: Connection, snapshot_id: str) -> tuple[list[dict],
     and `bool(None)` would report a deletion that never happened.
     """
     body = self._request("GET", f"snapshots/{snapshot_id}/responses")
-    return body["data"], bool(body["meta"]["snapshot"]["complete"])
+    meta = body["meta"]
+    snapshot = meta["snapshot"]
+    complete = bool(snapshot["complete"])
+
+    rows = body["data"]
+    if parse_dates:
+        rows = [_with_real_dates(row, meta.get("timezone")) for row in rows]
+
+    # Three different things, which one message used to conflate. Responses can be gone;
+    # the answers themselves can have changed; or this token simply reads fewer columns
+    # than the snapshot was recorded with, in which case the digests cannot be compared
+    # at all and nothing is wrong.
+    if not complete:
+        warnings.warn(
+            f"This snapshot is no longer complete: {snapshot['missing_rows']} of "
+            f"{snapshot['recorded_rows']} responses have been deleted since it was "
+            f"recorded. The dataset behind a result computed from it has changed.",
+            stacklevel=2,
+        )
+    elif meta.get("read_as_recorded") and not meta.get("matches_recorded"):
+        warnings.warn(
+            "Every recorded response is still there, but their contents no longer match "
+            "what was recorded. A result computed from this snapshot may no longer "
+            "reproduce.",
+            stacklevel=2,
+        )
+
+    return rows, complete
 
 
 Connection.snapshot = _snapshot

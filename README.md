@@ -24,9 +24,35 @@ included** when the study saves them: someone who stopped halfway is a row whose
 `completed_at` is empty. `len(rows)` is therefore not the number of completed
 participations.
 
-Nested answers — matrices, dynamic panels — stay nested, as the platform sends them. The R
-package can spread them into one column each (`sondavi_unnest()`) and join the waves of a
-study series; this one cannot yet.
+Nested answers — matrices, dynamic panels — stay nested, as the platform sends them.
+`unnest()` spreads them into one field each, under exactly the names the platform's own
+export writes:
+
+```python
+from sondavi import unnest
+
+flat = unnest(rows)
+flat[0].keys()
+#> … "ratings.speed.score", "contacts.0.who"          counting from zero, as the export does
+
+df = con.frame(42, unnest=True)                      # or straight into pandas
+```
+
+The codebook is applied by `frame()`, not by `responses()`: a dict has no notion of a
+factor, and replacing a code with its label would throw the code away. `codebook(42)`
+gives you the mapping if you want it yourself.
+
+## Waves of a study series
+
+```python
+d = con.waves([42, 43], names=["baseline", "followup"])
+returned = sum("mood_followup" in row for row in d)
+```
+
+Fields are suffixed per wave, and **everyone seen in any wave is kept** — a person who
+did not take the follow-up is simply missing those fields. Attrition is usually what a
+longitudinal design is about, so an inner join would drop exactly the cases you want to
+describe.
 
 ## The token
 
@@ -41,7 +67,15 @@ control, onto shared drives and into supplementary material.
 
 ## A live query is not a dataset
 
-Record what your result was computed from:
+Run the same script tomorrow and it may return different rows. Either record the
+fingerprint next to your result:
+
+```python
+con.fingerprint()
+#> 318 rows, fetched 2026-09-23T09:32:29+00:00, digest 332f3d2a1fbfd880
+```
+
+or record what your result was computed from:
 
 ```python
 snap = con.snapshot(42, label="Paper, figure 2")
@@ -60,7 +94,7 @@ rather than handed a smaller set as if nothing had happened.
 ## Tests
 
 ```
-tests/run.sh
+python tests/run.py
 ```
 
 Replays **real answers captured from the platform** (`tests/fixtures/`), including the
