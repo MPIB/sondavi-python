@@ -1,3 +1,63 @@
+# sondavi 0.4.0
+
+## Reverse-scored items
+
+On the platform you can mark a matrix row as "Reverse-scored": an item worded the
+other way round within a scale. The answer is stored as given, and the platform's
+export files add a reversed copy `<name>_r` = (smallest + largest scale value) −
+answer.
+
+* `unnest()` now adds the same field, right after the item it mirrors: a number,
+  computed from the answer as given, and None for an answer off the scale such as
+  "don't know". Name and arithmetic are the platform's, so `b5.worry_r` means the same
+  in an exported file and in data read through the API. It needs the codebook: pass
+  `codebook=con.codebook(42)` with rows; a DataFrame from `frame()` brings its own.
+* The codebook's variables carry `reverse_scored: {"min", "max"}` for a marked row.
+
+This needs a platform that sends `reverse_scored` in the codebook; with an older one
+there is simply no copy.
+
+## unnest() takes a DataFrame, and labels the cells
+
+`unnest(con.frame(42))` spreads the nested columns of a frame in place and gives the
+new columns the codebook's treatment, as `frame()` does for the questions at the top
+level: a matrix cell with value labels becomes a Categorical, a numeric one a number.
+`frame()` keeps its codebook in `df.attrs["sondavi_codebook"]` for this;
+`codebook=[]` leaves the cells as stored. `frame(42, unnest=True)` gives the same
+result.
+
+## Answers without a label are kept (changes existing behaviour)
+
+A value the codebook has no label for — an answer to an option deleted after people
+had chosen it, a code added later without a label — used to become NaN in `frame()`.
+NaN reads as "not answered", so the answer was lost without notice. It is now kept as
+a category of its own, named by the value, after the labelled ones, and a warning
+names the column and the values.
+
+A numeric variable holding something that is no number still has NaN there, but now
+with a warning saying what was dropped.
+
+## Fixed
+
+* In `frame()`, three kinds of column came out entirely NaN: yes/no questions (the
+  codebook writes `true`/`false`, the answers were compared as `True`/`False`),
+  numerically coded questions with at least one missing answer (pandas makes such a
+  column float, and `4.0` did not match `4`), and multiple-choice questions (a list
+  compared as text). The first two now read as their labels; a multiple-choice answer
+  stays a list, as in the R package.
+* `unnest()` dropped nested fields whose name starts with `__`. They are part of the
+  stored answer and are now kept, as the R package always did.
+
+## On the platform's side
+
+The rows now also carry the platform's internal fields under their own names
+(`__locale`, `__randomization_order`, …), and a question named like one of the row's
+own fields (`source`, `locale`, `completed_at`, …) arrives as `<name>_answer`. The
+package passes both through unchanged. **Server-side change — your platform needs
+updating for it.**
+
+The features match the R package 0.4.0.
+
 # sondavi 0.3.0
 
 ## Image marking questions

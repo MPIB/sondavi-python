@@ -42,6 +42,16 @@ The codebook is applied by `frame()`, not by `responses()`: a dict has no notion
 factor, and replacing a code with its label would throw the code away. `codebook(42)`
 gives you the mapping if you want it yourself.
 
+`unnest()` also takes a frame. `unnest(con.frame(42))` gives the new columns the
+codebook too — a matrix cell with value labels becomes a Categorical, like the questions
+beside it — and a matrix row marked "Reverse-scored" in the editor gets its reversed copy
+right after it, as in the platform's export file: `b5.worry_r` = (smallest + largest scale
+value) − answer, a number, empty for an answer off the scale such as "don't know". With
+rows, pass the codebook for the copies: `unnest(rows, codebook=con.codebook(42))`.
+
+A value the codebook has no label for (an answer to an option deleted later) is kept as a
+category of its own, named by the value, with a warning — not turned into NaN.
+
 ## Image marking
 
 An image marking question (participants paint areas or set pins on a map or picture) arrives

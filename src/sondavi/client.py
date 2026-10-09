@@ -4,18 +4,23 @@ analysis environment needs nothing installed to read its own data."""
 from __future__ import annotations
 
 import json
+import math
+import numbers
 import os
+import re
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone as _timezone
 from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.3.0"
+_USER_AGENT = "sondavi-python/0.4.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -103,7 +108,14 @@ class Connection:
         return self._request("GET", "surveys")["data"]
 
     def codebook(self, survey_id: int) -> list[dict]:
-        """Variable names, labels, types and value labels."""
+        """Variable names, labels, types and value labels, as the API sends them.
+
+        A matrix row the researcher marked "Reverse-scored" carries
+        `reverse_scored: {"min": ..., "max": ...}`, the smallest and largest number on its
+        scale; both are None when the scale has no numbers (marked, but nothing to reverse).
+        Its reversed copy is (min + max) − answer, which `unnest()` adds as `<name>_r`. The
+        copy is not a variable here: the API lists what its rows hold.
+        """
         return self._request("GET", f"surveys/{survey_id}/codebook")["variables"]
 
     def responses(self, survey_id: int, since: str | None = None,
@@ -213,10 +225,15 @@ class Connection:
         """The responses as a pandas DataFrame, with the codebook applied.
 
         Categorical questions become pandas Categoricals with their real labels
-        rather than bare codes — that is what a CSV cannot carry.
+        rather than bare codes — that is what a CSV cannot carry. A value the codebook has
+        no label for (an answer to an option deleted after people had chosen it, a code
+        added without a label) becomes a category of its own, named by the value, with a
+        warning naming the column — not NaN, which would read as "not answered".
 
-        Pass `unnest=True` to spread matrices and dynamic panels into one column each,
-        under the same names the platform's own export writes.
+        The codebook is kept in `df.attrs["sondavi_codebook"]`, so that `unnest(df)` gives
+        the matrix cells it spreads out the same treatment. Pass `unnest=True` to do that
+        here: one column per cell, under the names the platform's own export writes, and
+        the reversed copy `<name>_r` after a reverse-scored item.
         """
         try:
             import pandas as pd
@@ -225,11 +242,7 @@ class Connection:
 
         spread = kwargs.pop("unnest", False)
 
-        rows = self.responses(survey_id, **kwargs)
-        if spread:
-            rows = unnest(rows)
-
-        df = pd.DataFrame(rows)
+        df = pd.DataFrame(self.responses(survey_id, **kwargs))
         if df.empty:
             return df
 
@@ -238,22 +251,14 @@ class Connection:
         # "Already tz-aware, use tz_convert" — the kind of error that only appears once
         # both halves are right.
 
-        for var in self.codebook(survey_id):
-            name = var["name"]
-            if name not in df.columns:
-                continue
-            labels = var.get("value_labels") or []
-            if labels:
-                mapping = {str(l["value"]): l["text"] for l in labels}
-                df[name] = pd.Categorical(
-                    df[name].astype(str).map(mapping),
-                    categories=[l["text"] for l in labels],
-                )
-            elif var.get("type") == "numeric":
-                df[name] = pd.to_numeric(df[name], errors="coerce")
-
+        codebook = self.codebook(survey_id)
+        df = _apply_codebook(df, codebook)
         df.attrs["mpi_fingerprint"] = getattr(self, "last_fingerprint", None)
-        return df
+        df.attrs["sondavi_codebook"] = codebook
+
+        # Unnested after the codebook rather than before, so the cells are labelled by the
+        # same code path as `unnest(con.frame(42))` - one way to get a column, one result.
+        return unnest(df) if spread else df
 
 
 def _explain(status: int, message: str) -> str:
@@ -304,7 +309,7 @@ def _with_real_dates(row: dict, timezone_name: str | None) -> dict:
     return row
 
 
-def unnest(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
+def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None = None):
     """Spread nested answers into one field each.
 
     Matrices and dynamic panels arrive nested, because flattening them on arrival would
@@ -320,7 +325,24 @@ def unnest(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
     painted cells as row runs ("12:31-40 13:30" = row 12, columns 31 to 40, and row 13,
     column 30), pins as "x,y" pairs. For a heatmap use `markings()` instead, on the rows
     before unnesting.
+
+    `rows` is either what `responses()` returns or a DataFrame from `frame()`.
+
+    With a codebook, a matrix row marked "Reverse-scored" gets its reversed copy
+    `<name>_r` right after it, as in the platform's export file: (smallest + largest
+    scale value) − answer, computed from the answer as given; an answer off the scale
+    ("dk", empty) gives None there. The name is `<name>_r2`, `_r3` … when another variable
+    is already called `<name>_r` — the platform's rule. A DataFrame from `frame()` carries
+    its codebook, so this happens by itself, and the new columns also become Categoricals
+    and numbers like the questions beside them; `codebook=[]` leaves them as stored. For
+    rows, pass `codebook=con.codebook(42)`; dicts keep the codes, so only the copies are
+    added.
     """
+    pd = sys.modules.get("pandas")
+    if pd is not None and isinstance(rows, pd.DataFrame):
+        return _unnest_frame(rows, columns, codebook)
+
+    copies = _reversed_copies(codebook or [])
     out = []
 
     for row in rows:
@@ -329,9 +351,45 @@ def unnest(rows: list[dict], columns: list[str] | None = None) -> list[dict]:
             if columns is not None and key not in columns:
                 flat[key] = value
                 continue
-            flat.update(_flatten_answer(value, key))
+            for name, leaf in _flatten_answer(value, key).items():
+                flat[name] = leaf
+                if name in copies and copies[name]["name"] not in row:
+                    flat[copies[name]["name"]] = _reversed(leaf, copies[name]["sum"])
         out.append(flat)
 
+    return out
+
+
+def _unnest_frame(df, columns: list[str] | None, codebook: list[dict] | None):
+    import pandas as pd
+
+    codebook = df.attrs.get("sondavi_codebook") if codebook is None else codebook
+    nested = [c for c in df.columns
+              if df[c].dtype == object and df[c].map(lambda v: isinstance(v, (dict, list))).any()]
+    targets = nested if columns is None else [c for c in nested if c in columns]
+    if not targets:
+        return df
+
+    parts = []
+    for column in df.columns:
+        if column not in targets:
+            parts.append(df[[column]])
+            continue
+        # A missing answer contributes no fields — the rows path leaves the key out, and a
+        # stray column of None named after the question would be a variable nobody asked.
+        flats = [{} if _is_missing(v) else _flatten_answer(v, column) for v in df[column]]
+        names = list(dict.fromkeys(k for flat in flats for k in flat))
+        # From the dicts, so pandas infers the types exactly as it does for frame()'s own rows.
+        spread = pd.DataFrame(flats, columns=names, index=df.index)
+        # The codebook used to reach the cells only when it happened to be applied after
+        # unnesting; this way a cell gets what a question of its own gets, reversed copy
+        # from the raw answer first.
+        if codebook:
+            spread = _apply_codebook(spread, codebook)
+        parts.append(spread)
+
+    out = pd.concat(parts, axis=1)
+    out.attrs = dict(df.attrs)
     return out
 
 
@@ -350,13 +408,193 @@ def _flatten_answer(value: Any, prefix: str) -> dict:
 
     pairs = value.items() if isinstance(value, dict) else enumerate(value)
 
+    # Every key, those starting with "__" included: this is the raw answer, and a field the
+    # platform stored inside it is data, not noise. They used to be dropped here - and only
+    # here, so the R package and this one disagreed about what an answer holds.
     flat: dict = {}
     for key, child in pairs:
-        if isinstance(key, str) and key.startswith("__"):
-            continue
         flat.update(_flatten_answer(child, f"{prefix}.{key}"))
 
     return flat or {prefix: value}
+
+
+# ── Applying the codebook ────────────────────────────────────────────────────────────────
+
+def _apply_codebook(df, codebook: list[dict]):
+    """The point of shipping a codebook: real Categoricals, right types. On the top level in
+    frame() and on the new columns in unnest(), so a matrix cell is treated like a question
+    of its own."""
+    import pandas as pd
+
+    # The reversed copies first, from the answers as given: once a column is a Categorical its
+    # values are labels, and "Agree" has no arithmetic.
+    df = _add_reversed_copies(df, codebook)
+
+    for var in codebook:
+        name = var.get("name")
+        if name not in df.columns:
+            continue
+        column = df[name]
+        # Nested answers are left alone, as in the R package. A multiple-choice answer is a
+        # list; matched against the labels as text it used to become an empty Categorical.
+        if column.dtype == object and column.map(lambda v: isinstance(v, (dict, list))).any():
+            continue
+        labels = var.get("value_labels") or []
+        if labels:
+            df[name] = _labelled(column, labels, name)
+        elif var.get("type") == "numeric":
+            df[name] = _numbers(column, name)
+    return df
+
+
+def _labelled(column, labels: list[dict], name: str):
+    """A Categorical that keeps every answer.
+
+    Matching against the value labels alone turned a value without one — an answer to an
+    option deleted after people had chosen it, a "don't know" coded 99 and added later
+    without a label — into NaN, and NaN reads as "not answered". Such a value becomes a
+    category of its own, named by the value, after the labelled ones; the analyst hears
+    about it once per column.
+    """
+    import pandas as pd
+
+    mapping: dict[str, str] = {}
+    for label in labels:
+        # Two options with the same value: the first names it, as the platform lets the first
+        # question define a shared variable.
+        mapping.setdefault(_value_key(label.get("value")), label.get("text"))
+
+    keys = [_value_key(v) for v in column]
+    # An empty string is no answer, not an unknown one.
+    keys = [None if k == "" and "" not in mapping else k for k in keys]
+    unknown = list(dict.fromkeys(k for k in keys if k is not None and k not in mapping))
+    if unknown:
+        warnings.warn(
+            f"`{name}` holds {'a value' if len(unknown) == 1 else 'values'} the codebook has no "
+            f"label for: {_quoted(unknown)}. "
+            f"{'It is kept as a category of its own' if len(unknown) == 1 else 'They are kept as categories of their own'}, "
+            f"named by the value, rather than turned into NaN — usually an option deleted after "
+            f"people had chosen it, or a code added without a label.",
+            stacklevel=4,
+        )
+
+    texts = [None if k is None else mapping.get(k, k) for k in keys]
+    categories = list(dict.fromkeys(list(mapping.values()) + unknown))
+    return pd.Categorical(texts, categories=categories)
+
+
+def _numbers(column, name: str):
+    """A numeric variable as numbers. What is no number ("dk" in a rating, stray text) cannot
+    stay in a numeric column, but it must not vanish into NaN unannounced either."""
+    import pandas as pd
+
+    out = pd.to_numeric(column, errors="coerce")
+    lost = list(dict.fromkeys(str(v) for v, n in zip(column, out)
+                              if pd.isna(n) and not _is_missing(v) and str(v) != ""))
+    if lost:
+        warnings.warn(
+            f"`{name}` is numeric in the codebook but holds answers that are no numbers: "
+            f"{_quoted(lost)}. They are NaN here; responses() gives the answers as stored.",
+            stacklevel=4,
+        )
+    return out
+
+
+def _quoted(values: list, at_most: int = 10) -> str:
+    shown = ", ".join(f'"{v}"' for v in values[:at_most])
+    return shown + (f" and {len(values) - at_most} more" if len(values) > at_most else "")
+
+
+def _is_missing(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, float) and math.isnan(value):
+        return True
+    # pandas' own markers, without importing pandas for the comparison.
+    return type(value).__name__ in ("NAType", "NaTType")
+
+
+def _value_key(value: Any) -> str | None:
+    """What an answer is compared with the value labels by, written the way the codebook
+    writes values.
+
+    Matched as `str()`, a yes/no answer was "True" against the codebook's "true", and a
+    numeric code in a column with one missing answer was "4.0" (pandas makes such a
+    column float) against "4" — either way every answer of the column became NaN.
+    """
+    if _is_missing(value):
+        return None
+    if isinstance(value, bool) or type(value).__name__ == "bool_":
+        return "true" if value else "false"
+    if isinstance(value, numbers.Real):
+        number = float(value)
+        if number.is_integer() and abs(number) < 1e15:
+            return str(int(number))
+        return repr(number)
+    return str(value)
+
+
+# ── Reverse-scored items ─────────────────────────────────────────────────────────────────
+#
+# The platform stores an answer as it was given and mirrors it only when the data are read
+# (its SPECS §75): the reversed copy `<name>_r` = (smallest + largest scale value) − answer.
+# Its data files carry that column; the API does not, and names the range instead
+# (`reverse_scored: {min, max}` on the variable), so the copy is built here. Name, arithmetic
+# and what counts as a number follow the platform, so `b5.worry_r` means the same thing in an
+# exported file and in data read through the API.
+
+# What PHP's is_numeric() accepts, which is what the platform mirrors: " 4" is a number,
+# "0x1A", "inf" and "1_000" are not (float() would take the last two).
+_NUMBER = re.compile(r"^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$")
+
+
+def _reversed_copies(codebook: list[dict]) -> dict[str, dict]:
+    """source name → {"name", "sum", "label"} for each copy to make, in codebook order."""
+    taken = {v.get("name") for v in codebook}
+    copies: dict[str, dict] = {}
+    for var in codebook:
+        scale = var.get("reverse_scored") or {}
+        if scale.get("min") is None or scale.get("max") is None:
+            continue
+        source = var["name"]
+        # `<name>_r`, or `_r2`, `_r3` … when another variable already has that name.
+        name, n = f"{source}_r", 2
+        while name in taken:
+            name, n = f"{source}_r{n}", n + 1
+        taken.add(name)
+        copies[source] = {"name": name, "sum": scale["min"] + scale["max"], "label": var.get("label")}
+    return copies
+
+
+def _reversed(value: Any, total: float) -> float | int | None:
+    """(min + max) − answer for an answer that is a number; None for "dk", an empty answer,
+    yes/no and anything else off the scale."""
+    if isinstance(value, bool) or type(value).__name__ == "bool_" or _is_missing(value):
+        return None
+    if isinstance(value, numbers.Real):
+        result = total - value
+    elif isinstance(value, str) and _NUMBER.match(value):
+        result = total - float(value)
+    else:
+        return None
+    # 6.0 → 6, as the platform writes it: whole numbers stay whole.
+    return int(result) if float(result).is_integer() else result
+
+
+def _add_reversed_copies(df, codebook: list[dict]):
+    """Each copy right after the column it mirrors, as the export file has it. A numeric
+    column, whatever the source becomes afterwards: it is for computing a scale score with."""
+    import pandas as pd
+
+    for source, copy in _reversed_copies(codebook).items():
+        if source not in df.columns or copy["name"] in df.columns:
+            continue
+        if df[source].map(lambda v: isinstance(v, (dict, list))).any():
+            continue   # a nested answer has no single value to mirror
+        values = [_reversed(v, copy["sum"]) for v in df[source]]
+        df.insert(df.columns.get_loc(source) + 1, copy["name"],
+                  pd.to_numeric(pd.Series(values, index=df.index, dtype=object), errors="coerce"))
+    return df
 
 
 # ── Image marking ────────────────────────────────────────────────────────────────────────

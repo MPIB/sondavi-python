@@ -7,6 +7,7 @@ Plain asserts, no test framework — an analysis machine has none installed eith
 import os
 import sys
 import time
+import warnings
 
 # Windows' console is cp1252 by default, and the tick below is not in it: the run died with
 # a UnicodeEncodeError on exactly one of the three CI systems, which hides the cause well.
@@ -84,6 +85,12 @@ ok("the codebook lists every variable",
    all(n in names for n in ("age", "mood", "why")) and "ratings.speed.score" in names)
 mood = next(v for v in cb if v["name"] == "mood")
 ok("and carries the value labels", len(mood["value_labels"]) == 3)
+# The API names the range a marked row is mirrored in; the copy itself is the client's to make.
+worry = next(v for v in cb if v["name"] == "b5.worry")
+calm = next(v for v in cb if v["name"] == "b5.calm")
+ok("a matrix row marked reverse-scored names its range", worry.get("reverse_scored") == {"min": 1, "max": 5})
+ok("an unmarked row has no such field", "reverse_scored" not in calm)
+ok("the reversed copy is not a variable of the API", "b5.worry_r" not in names)
 
 print("\nResponses")
 rows = con.responses(SURVEY)
@@ -91,6 +98,8 @@ ok("every page is walked", len(rows) == 3)
 ok("no row twice", len({r["response_id"] for r in rows}) == 3)
 ok("the granted identifier is there", "respondent_id" in rows[0])
 ok("the ungranted one is not", "ip_address" not in rows[0])
+ok("the platform's internal fields come under their own names",
+   all(r["__locale"] == "default" for r in rows))
 ok("max_rows stops early", len(con.responses(SURVEY, max_rows=1)) == 1)
 ok("the fingerprint is kept", "digest" in (con.last_fingerprint or {}))
 
@@ -148,6 +157,36 @@ ok("naming one field leaves the others nested",
 cb_names = {v["name"] for v in cb}
 produced = {k for k in flat if k.startswith(("ratings.", "contacts.", "map.", "visits."))}
 ok("every flattened name appears in the codebook", produced <= cb_names)
+ok("the internal fields pass through untouched", flat["__locale"] == "default")
+# Raw is raw: the R package always kept these, this one dropped them.
+kept = unnest([{"q": {"row": {"col": 1}, "__note": "x"}}])[0]
+ok("a nested field starting with __ is kept", kept.get("q.__note") == "x" and kept.get("q.row.col") == 1)
+
+print("\nReverse-scored items")
+ok("without a codebook there is no reversed copy", "b5.worry_r" not in flat)
+flat_r = unnest(rows, codebook=cb)
+keys = list(flat_r[0])
+ok("with one, the copy follows its item, as in the export file",
+   keys[keys.index("b5.worry") + 1] == "b5.worry_r")
+ok("min + max - answer: 2 on a 1-5 scale becomes 4", flat_r[0]["b5.worry_r"] == 4)
+ok("an answer off the scale (dk) has no reversed value", flat_r[1]["b5.worry_r"] is None)
+ok("the answer itself is untouched", flat_r[1]["b5.worry"] == "dk")
+ok("an unmarked row gets no copy", "b5.calm_r" not in flat_r[0])
+ok("a replayed snapshot is mirrored the same way", unnest(replayed, codebook=cb)[2]["b5.worry_r"] == 1)
+
+# The platform's rules, on answers the recording does not have.
+synthetic_cb = [
+    {"name": "q.a", "label": "Item A", "type": "categorical", "reverse_scored": {"min": 1, "max": 7},
+     "value_labels": [{"value": str(i), "text": f"Level {i}"} for i in range(1, 8)]},
+    {"name": "q.a_r", "label": "Another variable", "type": "numeric", "value_labels": []},
+]
+syn = unnest([{"q": {"a": 3, "a_r": 9}}, {"q": {"a": "7"}}, {"q": {"a": "0x1A"}}, {"q": {"a": "inf"}}],
+             codebook=synthetic_cb)
+ok("a taken name makes the copy <name>_r2", list(syn[0]) == ["q.a", "q.a_r2", "q.a_r"])
+ok("and the variable that had the name keeps its value", syn[0]["q.a_r"] == 9)
+ok("a number given as text is still a number", syn[1]["q.a_r2"] == 1)
+# PHP's is_numeric, as on the platform; float() would read "inf".
+ok("hexadecimal and inf are not", syn[2]["q.a_r2"] is None and syn[3]["q.a_r2"] is None)
 
 print("\nImage marking")
 # The API sends the stored answer (image, grid, cells or pins); unnest has to write it the way
@@ -208,6 +247,73 @@ try:
     ok("carrying the platform's time zone", df["completed_at"].dt.tz is not None)
     ok("so a duration can simply be computed",
        (df["completed_at"] - df["started_at"]).dt.total_seconds().gt(0).all())
+    ok("the codebook is kept with the frame", [v["name"] for v in df.attrs["sondavi_codebook"]] == names)
+    ok("the internal fields are columns of their own", (df["__locale"] == "default").all())
+
+    import pandas as pd
+    from sondavi.client import _apply_codebook  # noqa: E402 - the top-level rules, synthetic cases
+
+    print("\nMatrix cells in a frame get the codebook too")
+    # The recording holds an answer whose option was deleted afterwards; what unnest says about
+    # it is checked below.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fu = unnest(df)
+    ok("unnest takes the frame", "b5.worry" in fu.columns and "b5" not in fu.columns)
+    ok("and leaves the frame it was given alone", "b5" in df.columns)
+    ok("a matrix cell with value labels becomes a Categorical", str(fu["b5.worry"].dtype) == "category")
+    ok("reading as its label", fu["b5.worry"].iloc[0] == "A little")
+    ok("an off-scale option keeps its own label", fu["b5.worry"].iloc[1] == "Don't know")
+    columns = list(fu.columns)
+    ok("the reversed copy follows its item", columns[columns.index("b5.worry") + 1] == "b5.worry_r")
+    # Computed from the answer as given, before the cell became a Categorical.
+    ok("as a number: 2 on a 1-5 scale becomes 4",
+       str(fu["b5.worry_r"].dtype).startswith(("float", "int")) and fu["b5.worry_r"].iloc[0] == 4)
+    ok("dk has no reversed value", pd.isna(fu["b5.worry_r"].iloc[1]))
+    ok("an unmarked row gets no copy", "b5.calm_r" not in fu.columns)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ok("frame(unnest=True) gives the same frame", con.frame(SURVEY, unnest=True).equals(fu))
+    raw_cells = unnest(df, codebook=[])
+    ok("codebook=[] leaves the cells as stored",
+       list(raw_cells["b5.worry"]) == [2, "dk", 2] and "b5.worry_r" not in raw_cells.columns)
+
+    print("\nAnswers without a value label")
+    # Mapped against the labels alone they became NaN, which reads as "not answered".
+    calm_warnings = [str(w.message) for w in caught if "b5.calm" in str(w.message)]
+    ok("are kept, named by their value", fu["b5.calm"].iloc[1] == "6")
+    ok("as a category after the labelled ones", list(fu["b5.calm"].cat.categories) == [
+        "Not at all", "A little", "Somewhat", "Very", "Completely", "Don't know", "6"])
+    ok("the analyst is warned once for the column, with the value",
+       len(calm_warnings) == 1 and '"6"' in calm_warnings[0])
+    ok("a column whose answers all have labels is not mentioned",
+       not any("b5.worry" in str(w.message) for w in caught))
+
+    # Two cases where every answer of a column used to become NaN: a yes/no answer compared
+    # as "True" with the codebook's "true", and a numeric code in a column pandas made float
+    # because one answer is missing ("4.0" against "4"). And a multiple-choice answer, which
+    # matched as text became an empty Categorical.
+    with warnings.catch_warnings(record=True) as caught_top:
+        warnings.simplefilter("always")
+        top = _apply_codebook(pd.DataFrame({
+            "consent": [True, False, None], "code": [4, None, 2], "multi": [["a"], ["a", "b"], None],
+            "q.a": [2, None, 5], "q.a_r": ["9", "dk", None],
+        }), [
+            {"name": "consent", "value_labels": [{"value": "true", "text": "Yes"}, {"value": "false", "text": "No"}]},
+            {"name": "code", "value_labels": [{"value": "2", "text": "Two"}, {"value": "4", "text": "Four"}]},
+            {"name": "multi", "value_labels": [{"value": "a", "text": "A"}, {"value": "b", "text": "B"}]},
+            *synthetic_cb,
+        ])
+    ok("a yes/no answer reads as its label", list(top["consent"].iloc[:2]) == ["Yes", "No"])
+    ok("a numeric code in a column with a missing answer finds its label",
+       list(top["code"].iloc[[0, 2]]) == ["Four", "Two"])
+    ok("a multiple-choice answer stays a list", top["multi"].iloc[1] == ["a", "b"])
+    columns = list(top.columns)
+    ok("a reverse-scored column at the top level gets its copy as well",
+       columns[columns.index("q.a") + 1] == "q.a_r2" and list(top["q.a_r2"].iloc[[0, 2]]) == [6, 3])
+    ok("a numeric variable says which answers are no numbers",
+       any("`q.a_r`" in str(w.message) and '"dk"' in str(w.message) for w in caught_top))
+    ok("and nothing else is warned about", len(caught_top) == 1)
 except RuntimeError as err:
     print("  (skipped:", err, ")")
 

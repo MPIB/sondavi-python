@@ -14,4 +14,4 @@ from .client import Connection, ApiError, connect, unnest, markings
 from .snapshots import Snapshot
 
 __all__ = ["connect", "Connection", "ApiError", "Snapshot", "unnest", "markings"]
-__version__ = "0.3.0"
+__version__ = "0.4.0"
