@@ -52,6 +52,27 @@ rows, pass the codebook for the copies: `unnest(rows, codebook=con.codebook(42))
 A value the codebook has no label for (an answer to an option deleted later) is kept as a
 category of its own, named by the value, with a warning — not turned into NaN.
 
+## Scale scores
+
+Name the items of a scale as they are called in the questionnaire; the package takes their
+numbers from the codebook and uses the reversed copy for every item marked
+"Reverse-scored", so you need not remember which ones are worded the other way round:
+
+```python
+from sondavi import items, scale
+
+names = ["b5.calm", "b5.worry", "b5.rested"]                  # b5.worry is reverse-scored
+df["b5_score"] = scale(df, names)                             # NaN unless all three are answered
+df["b5_score"] = scale(df, names, min_items=2)                # allow one gap, on purpose
+items(df, names)                                              # b5.calm, b5.worry_r, b5.rested
+scores = scale(flat, names, codebook=con.codebook(42))        # rows work too
+```
+
+In a frame the items are Categoricals, and their codes are positions, not answers: on a
+1–5 scale with "Don't know" as a sixth option, `.cat.codes + 1` makes "Don't know" a 6.
+"Don't know" and other answers that are no number count as missing here; by default every
+item has to be answered, so a mean over fewer items never happens unnoticed.
+
 ## Image marking
 
 An image marking question (participants paint areas or set pins on a map or picture) arrives

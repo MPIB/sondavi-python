@@ -4,6 +4,7 @@
 Run via tests/run.sh, which starts clients/fixtures/fixture-server.py first.
 Plain asserts, no test framework — an analysis machine has none installed either."""
 
+import json
 import os
 import sys
 import time
@@ -21,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
-from sondavi import unnest, markings  # noqa: E402
+from sondavi import unnest, markings, items, scale  # noqa: E402
 
 # The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
 # machine, and CI runners carry their own listening services.
@@ -173,6 +174,38 @@ ok("an answer off the scale (dk) has no reversed value", flat_r[1]["b5.worry_r"]
 ok("the answer itself is untouched", flat_r[1]["b5.worry"] == "dk")
 ok("an unmarked row gets no copy", "b5.calm_r" not in flat_r[0])
 ok("a replayed snapshot is mirrored the same way", unnest(replayed, codebook=cb)[2]["b5.worry_r"] == 1)
+ok("a reverse-scored row of a multi-select matrix gets its copy as well",
+   flat_r[0]["ratings.clarity.score"] == 5 and flat_r[0]["ratings.clarity.score_r"] == 1)
+
+print("\nThe reversed copies are the platform's own")
+# The platform's "JSON (flat)" export of the same study, recorded next to the API answers
+# (clients/fixtures-aufzeichnen.sh). The package builds `_r` itself from the codebook; this
+# checks that it builds the same fields with the same values, rather than asserting it.
+exported = json.loads((Path(__file__).parent / "fixtures" / "export_flat.json").read_text(encoding="utf-8"))
+export_copies = {k for k in exported[0] if k.endswith("_r")}
+# The snapshot replay holds all three recorded rows with their real ids.
+built = {row["response_id"]: row for row in unnest(replayed, codebook=cb)}
+ok("the export file has reversed copies to compare with", len(export_copies) >= 2)
+ok("the package builds exactly the export's reversed fields",
+   export_copies == {k for row in built.values() for k in row if k.endswith("_r")})
+ok('with the export\'s values, row by row ("dk" empty in both)', all(
+    (None if row[k] in ("", None) else float(row[k])) == built[row["response_id"]].get(k)
+    for row in exported for k in export_copies))
+
+print("\nScale scores")
+scale_items = ["b5.calm", "b5.worry"]
+table = items(flat_r, scale_items, codebook=cb)
+ok("the items come as numbers, a reverse-scored one under its copy's name",
+   list(table[0]) == ["b5.calm", "b5.worry_r"] and table[0] == {"b5.calm": 4, "b5.worry_r": 4})
+ok('"dk" is no number', "b5.worry_r" in table[1] and table[1]["b5.worry_r"] is None)
+ok("an answer without a label keeps its value (6 for a deleted option)", table[1].get("b5.calm") == 6)
+ok("reverse=False gives the item as answered",
+   items(flat_r, scale_items, codebook=cb, reverse=False)[0] == {"b5.calm": 4, "b5.worry": 2})
+ok("the score is the mean of the items", scale(flat_r, scale_items, codebook=cb)[0] == 4)
+ok("by default every item has to be answered", scale(flat_r, scale_items, codebook=cb)[1] is None)
+ok("min_items allows gaps on purpose", scale(flat_r, scale_items, codebook=cb, min_items=1)[1] == 6)
+fails_with("rows need the codebook passed", "codebook=con.codebook", lambda: items(flat_r, scale_items))
+fails_with("an unknown field is named", "b5.nope", lambda: items(flat_r, ["b5.nope"], codebook=cb))
 
 # The platform's rules, on answers the recording does not have.
 synthetic_cb = [
@@ -274,6 +307,21 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ok("frame(unnest=True) gives the same frame", con.frame(SURVEY, unnest=True).equals(fu))
+    print("\nScale scores from a frame")
+    # The category codes are positions: "Don't know", the sixth option, is code 5 — 6 counted
+    # from one. items() reads the numbers from the codebook instead.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ft = items(fu, scale_items)
+    ok("the items come as numbers", list(ft.columns) == ["b5.calm", "b5.worry_r"]
+       and all(str(t).startswith("float") for t in ft.dtypes))
+    ok('"Don\'t know" is no number, not 6',
+       fu["b5.worry"].cat.codes.iloc[1] + 1 == 6 and pd.isna(ft["b5.worry_r"].iloc[1]))
+    ok("the same numbers as from the rows", ft.iloc[0].to_dict() == {"b5.calm": 4.0, "b5.worry_r": 4.0})
+    # Row 999 is the fixture server's replay of the first one (its second page); filtered out.
+    ok("a frame carries its codebook, also when filtered",
+       list(scale(fu[fu["response_id"] != 999], scale_items, min_items=1)) == [4.0, 6.0])
+    ok("the score is a Series on the frame's index", scale(fu, scale_items).index.equals(fu.index))
     raw_cells = unnest(df, codebook=[])
     ok("codebook=[] leaves the cells as stored",
        list(raw_cells["b5.worry"]) == [2, "dk", 2] and "b5.worry_r" not in raw_cells.columns)

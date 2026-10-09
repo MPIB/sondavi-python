@@ -1,3 +1,18 @@
+# sondavi 0.5.0
+
+## Scale scores
+
+* `scale(data, names)` is the scale score per row, `items(data, names)` the items as
+  numbers (a DataFrame for `corr()` or a reliability analysis). Name the items as in the
+  questionnaire: a reverse-scored one is taken from its reversed copy by itself. Works on a
+  frame (which carries its codebook) and on rows (pass `codebook=con.codebook(42)`).
+* They read the numbers from the codebook. In a frame the items are Categoricals, whose
+  codes are positions: a "Don't know" offered as sixth option was a 6.
+* By default every item has to be answered; `min_items` allows gaps on purpose.
+
+The tests now also compare the reversed copies with the platform's own export file of the
+same study, value by value.
+
 # sondavi 0.4.0
 
 ## Reverse-scored items

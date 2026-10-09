@@ -597,6 +597,102 @@ def _add_reversed_copies(df, codebook: list[dict]):
     return df
 
 
+# ── Scales ───────────────────────────────────────────────────────────────────────────────
+
+def items(data, names: list[str], codebook: list[dict] | None = None, reverse: bool = True):
+    """The items of a scale as numbers, reverse-scored ones reversed.
+
+    A scale is computed from numbers, but `frame()` hands a choice item out as a
+    Categorical with its labels — what a table or a plot needs. Its category codes are
+    positions, not answers: on a 1–5 scale with "Don't know" as a sixth option, "Don't
+    know" is 6. This takes the numbers from the codebook instead.
+
+    An item the researcher marked "Reverse-scored" in the editor comes reversed —
+    (smallest + largest scale value) − answer — under the name of its reversed copy
+    (`b5.worry_r`), so you name the items as they are called in the questionnaire and do
+    not need to remember which are worded the other way round. `reverse=False` gives
+    every item as answered. An answer that is no number ("dk") is None (NaN in a frame).
+
+    `data` is what `unnest()` returns: rows (then pass `codebook=con.codebook(42)`) or a
+    DataFrame, which carries its codebook. Returns the same kind: rows of numbers, or a
+    DataFrame of floats.
+    """
+    pd = sys.modules.get("pandas")
+    frame = pd is not None and isinstance(data, pd.DataFrame)
+    if codebook is None and frame:
+        codebook = data.attrs.get("sondavi_codebook")
+    if codebook is None:
+        raise ValueError("items() reads the numbers from the codebook: pass codebook=con.codebook(42).")
+
+    variables = {v.get("name"): v for v in codebook}
+    copies = _reversed_copies(codebook)
+    columns: dict[str, list] = {}
+    for name in names:
+        if frame:
+            if name not in data.columns:
+                raise KeyError(f"Not a column of the data: {name!r}")
+            # Only a Categorical holds labels; in rows and in plain columns the codes are the answers.
+            labelled = isinstance(data[name].dtype, pd.CategoricalDtype)
+            raw = list(data[name])
+        else:
+            if name not in variables and not any(name in row for row in data):
+                raise KeyError(f"Not a field of the rows: {name!r}")
+            labelled = False
+            raw = [row.get(name) for row in data]
+        values = [_item_number(v, variables.get(name) if labelled else None) for v in raw]
+        if reverse and name in copies:
+            values = [None if v is None else _whole(copies[name]["sum"] - v) for v in values]
+            name = copies[name]["name"]
+        columns[name] = values
+
+    if frame:
+        return pd.DataFrame(columns, index=data.index, dtype=float)
+    return [dict(zip(columns, values)) for values in zip(*columns.values())]
+
+
+def scale(data, names: list[str], codebook: list[dict] | None = None, min_items: int | None = None):
+    """The scale score per row: the mean of `items()`.
+
+    None (NaN in a frame) for a row with fewer than `min_items` numbers — by default every
+    item has to be answered, so a mean over fewer items never happens unnoticed. Lower it to
+    allow gaps, e.g. `min_items=3` for three of four.
+    """
+    need = len(names) if min_items is None else min_items
+    if need < 1:
+        raise ValueError("min_items has to be at least 1.")
+    table = items(data, names, codebook=codebook)
+
+    def score(values):
+        numbers_ = [v for v in values if not _is_missing(v)]
+        return sum(numbers_) / len(numbers_) if len(numbers_) >= need else None
+
+    pd = sys.modules.get("pandas")
+    if pd is not None and isinstance(table, pd.DataFrame):
+        return pd.Series([score(list(r)) for r in table.itertuples(index=False)], index=table.index, dtype=float)
+    return [score(list(row.values())) for row in table]
+
+
+def _item_number(value: Any, variable: dict | None) -> float | int | None:
+    """The stored number of one answer. With a variable, `value` is a label and is turned
+    back into its value first; a category the codebook has no label for is named by its
+    value already. What is no number is None — the same rule as the reversed copies."""
+    if _is_missing(value) or isinstance(value, bool) or type(value).__name__ == "bool_":
+        return None
+    if isinstance(value, numbers.Real):
+        return _whole(float(value))
+    text = str(value)
+    for label in (variable or {}).get("value_labels") or []:
+        if label.get("text") == text:
+            text = _value_key(label.get("value")) or ""
+            break
+    return _whole(float(text)) if _NUMBER.match(text) else None
+
+
+def _whole(number: float) -> float | int:
+    # 6.0 → 6, as the platform writes it: whole numbers stay whole.
+    return int(number) if float(number).is_integer() else number
+
+
 # ── Image marking ────────────────────────────────────────────────────────────────────────
 #
 # The stored answer of an image marking question carries its own image and grid:
