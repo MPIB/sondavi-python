@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
-from sondavi import unnest, markings, items, scale  # noqa: E402
+from sondavi import unnest, markings, conversations, items, scale  # noqa: E402
 
 # The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
 # machine, and CI runners carry their own listening services.
@@ -75,7 +75,7 @@ print("\nListing and codebook")
 surveys = con.surveys()
 # Read from the recording, not written down: every re-recording creates a fresh study.
 SURVEY = surveys[0]["id"]
-ok("the studies arrive", len(surveys) == 2 and isinstance(SURVEY, int))
+ok("the studies arrive", len(surveys) == 3 and isinstance(SURVEY, int))
 ok("with the privacy level", surveys[0]["privacy"] == "identified")
 
 cb = con.codebook(SURVEY)
@@ -254,6 +254,65 @@ ok("one question can be asked for", {r["question"] for r in markings(rows, colum
 ok("a study without image marking gives an empty table",
    markings([{k: v for k, v in r.items() if k not in ("map", "visits")} for r in rows]) == [])
 
+print("\nAI interviews")
+# An interview question arrives as the whole conversation (mode, status, turns, messages, ...).
+# unnest writes the export's columns - the ones the codebook lists - not a field per message;
+# conversations() is the conversation as a long table. The study is a real recording.
+INTERVIEW = surveys[2]["id"]
+irows = con.responses(INTERVIEW)
+iflat = unnest(irows)
+ok("an interview question becomes the export's fields",
+   {"talk.status", "talk.turns", "talk.answered", "talk.skipped", "talk.summary", "chat.status", "chat.turns"} <= set(iflat[0]))
+ok("and nothing of the stored conversation leaks out as fields",
+   not any(k.startswith(("talk.mode", "talk.messages", "talk.questionStatus", "talk.microNarrative", "chat.messages"))
+           for r in iflat for k in r))
+icodebook = con.codebook(INTERVIEW)
+ok("every field the codebook names for it is there",
+   {v["name"] for v in icodebook if v["name"].startswith(("talk.", "chat."))} <= {k for r in iflat for k in r})
+ok("a free interview has no counts of questions", not any("chat.answered" in r or "chat.skipped" in r for r in iflat))
+ok("how it ended, the turns, the question counts", (iflat[0]["talk.status"], iflat[0]["talk.turns"], iflat[0]["talk.answered"],
+   iflat[0]["talk.skipped"]) == ("completed", 4, 2, 0) and (iflat[1]["talk.status"], iflat[1]["talk.turns"], iflat[1]["talk.answered"]) == ("aborted", 1, 1))
+ok("the chosen summary is there, None where none was chosen",
+   iflat[0]["talk.summary"].startswith("I write software") and iflat[1]["talk.summary"] is None)
+ok("the whole-survey interview's probing stays readable",
+   iflat[2]["interview_probing.job.was_probed"] is True and iflat[2]["interview_probing.job.transcript"].startswith("I: What is your job"))
+
+talk = conversations(irows)
+ok("the conversations: one row per message", len(talk) == 9 + 7 + 2)
+ok("with their fields", list(talk[0]) == ["response_id", "respondent_id", "completed_at", "question", "mode",
+                                          "message", "role", "answer", "text", "input", "at", "state"])
+one = [r for r in talk if r["question"] == "talk" and r["respondent_id"] == "PNL-1"]
+ok("in the order of the conversation, interviewer first", [r["message"] for r in one] == list(range(1, 10)) and one[0]["role"] == "interviewer")
+ok("the respondent's answers are counted", [r["answer"] for r in one if r["role"] == "respondent"] == [1, 2, 3, 4]
+   and all(r["answer"] is None for r in one if r["role"] == "interviewer"))
+ok("an answer says whether it was typed or spoken",
+   [r["input"] for r in talk if r["question"] == "chat" and r["role"] == "respondent"] == ["text", "voice", "text"])
+ok("each message has its time", all(r["at"] and r["at"].endswith("Z") for r in talk))
+ok("and its words", one[1]["text"].startswith("TEST I write software"))
+ok("an interview that ended early keeps what was said", sum(r["respondent_id"] == "PNL-2" for r in talk) == 2)
+ok("one question can be asked for", {r["question"] for r in conversations(irows, columns=["chat"])} == {"chat"})
+# What the recording does not have: a flow interview, a summary in a free one, a blank choice.
+flow = {"mode": "flow", "status": "active", "turns": 1, "statePath": [{"state": "intro", "via": "start", "turn": 0}], "messages": [
+    {"role": "assistant", "text": "Hi", "at": "2026-10-15T20:00:00.000000Z", "state": "intro"},
+    {"role": "user", "text": "Hello", "at": "2026-10-15T20:00:05.500000Z", "input": "voice"}]}
+free = {"mode": "free", "status": "completed", "turns": 2, "messages": [],
+        "microNarrative": {"status": "chosen", "options": ["  "], "chosenIndex": 0, "chosen": "  "}}
+own = unnest([{"response_id": 1, "q": flow}, {"response_id": 2, "q": free}])
+ok("a flow interview has no counts of questions and no summary",
+   own[0] == {"response_id": 1, "q.status": "active", "q.turns": 1})
+ok("a free interview offering summaries has the summary field; a blank choice is none",
+   own[1] == {"response_id": 2, "q.status": "completed", "q.turns": 2, "q.summary": None})
+covered = {"mode": "state", "status": "completed", "turns": 1, "messages": [], "questionStatus": [
+    {"id": "a", "status": "answered"}, {"id": "b", "status": "skipped_anticipated"}, {"id": "c", "status": "pending"}]}
+cf = unnest([{"response_id": 3, "q": covered}])[0]
+ok("a question already covered by an earlier answer counts as skipped, an open one as neither",
+   (cf["q.answered"], cf["q.skipped"]) == (1, 1))
+oc = conversations([{"response_id": 1, "q": flow}, {"response_id": 2, "q": free}])
+ok("a flow interview's messages say in which stage the interviewer was", [r["state"] for r in oc] == ["intro", None])
+ok("an interview without messages contributes no rows", {r["response_id"] for r in oc} == {1})
+ok("rows without respondent_id give none", "respondent_id" not in oc[0])
+ok("a study without interview questions gives an empty table", conversations(rows) == [])
+
 print("\nJoining waves")
 waves = con.waves([s["id"] for s in surveys[:2]], names=["w1", "w2"])
 ok("one row per person seen in any wave", len(waves) == 3)
@@ -307,6 +366,12 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ok("frame(unnest=True) gives the same frame", con.frame(SURVEY, unnest=True).equals(fu))
+    dfi = con.frame(INTERVIEW)
+    fi = unnest(dfi)
+    ok("an interview's ending is a Categorical with the codebook's labels",
+       str(fi["talk.status"].dtype) == "category" and fi["talk.status"].iloc[1] == "Ended early after technical problems")
+    said = lambda table: [(r["question"], r["message"], r["role"], r["answer"], r["text"], r["input"]) for r in table]
+    ok("conversations() takes the frame as well", said(conversations(dfi)) == said(talk))
     print("\nScale scores from a frame")
     # The category codes are positions: "Don't know", the sixth option, is code 5 — 6 counted
     # from one. items() reads the numbers from the codebook instead.

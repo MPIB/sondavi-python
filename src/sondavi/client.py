@@ -398,6 +398,9 @@ def _flatten_answer(value: Any, prefix: str) -> dict:
     # export writes one column per marking type, and so does this.
     if _is_image_marking(value):
         return _image_marking_columns(value, prefix)
+    # So is an AI interview: the export's columns, not one per message (see conversations()).
+    if _is_interview_answer(value):
+        return _interview_columns(value, prefix)
 
     if not isinstance(value, (dict, list)) or not value:
         return {prefix: value}
@@ -816,3 +819,104 @@ def _image_marking_rows(answer: dict) -> list[dict]:
             # The centre of the cell — the platform's +0.5 convention.
             marks.append(place(category, r, c, (c + 0.5) / cols, (r + 0.5) / rows))
     return marks
+
+
+# ── AI interview question ────────────────────────────────────────────────────────────────
+#
+# The stored answer of an interview question is the whole conversation:
+#   {"mode": "free" | "state" | "flow", "status", "turns",
+#    "messages": [{"role": "assistant" | "user", "text", "at", "input"?, "state"?}, ...],
+#    "questionStatus"?, "statePath"?, "microNarrative"?, "voiceConsent"?, ...}
+# unnest() writes the columns the platform's export file and codebook have
+# (App\Support\LlmInterviewAnswer); the conversation itself is the long table of
+# conversations().
+
+_CONVERSATION_COLUMNS = ("response_id", "respondent_id", "completed_at", "question", "mode",
+                         "message", "role", "answer", "text", "input", "at", "state")
+_ROLES = {"assistant": "interviewer", "user": "respondent"}
+
+
+def _is_interview_answer(value: Any) -> bool:
+    return isinstance(value, dict) and all(k in value for k in ("mode", "status", "turns", "messages"))
+
+
+def _interview_columns(value: dict, prefix: str) -> dict:
+    out = {f"{prefix}.status": value.get("status"), f"{prefix}.turns": int(value.get("turns") or 0)}
+    # Only an interview with a list of questions has these; elsewhere there is no column
+    # rather than a 0 of nothing - the export's rule.
+    if value.get("mode") == "state":
+        statuses = [q.get("status") for q in value.get("questionStatus") or [] if isinstance(q, dict)]
+        out[f"{prefix}.answered"] = statuses.count("answered")
+        out[f"{prefix}.skipped"] = statuses.count("skipped_anticipated")
+    # Only when the interview offers summaries; None when none was chosen.
+    narrative = value.get("microNarrative")
+    if isinstance(narrative, dict):
+        chosen = narrative.get("chosen")
+        out[f"{prefix}.summary"] = chosen if isinstance(chosen, str) and chosen.strip() else None
+    return out
+
+
+def conversations(rows, columns: list[str] | None = None) -> list[dict]:
+    """One row per message of an AI interview question.
+
+    An interview question arrives as its stored answer: the whole conversation, with
+    how it ended and, where the interview offers one, the summary the respondent
+    chose. `unnest()` turns that into the export's columns (`<question>.status`,
+    `.turns`, `.answered`, `.skipped`, `.summary`); this turns the conversation itself
+    into a long table, the shape for coding answers, counting words or measuring how
+    long people took:
+
+        import pandas as pd
+        c = pd.DataFrame(conversations(con.responses(42)))
+        said = c[c.role == "respondent"]
+        said.groupby("response_id").text.apply(" ".join)       # everything a person said
+        said.groupby("input").size()                            # typed or spoken
+
+    Fields: `response_id`, `respondent_id` (when the rows carry it), `completed_at`,
+    `question`, `mode` (free, state or flow), `message` (1, 2, ... in the order of the
+    conversation), `role` ("interviewer" or "respondent"), `answer` (the respondent's
+    1st, 2nd ... answer; None for the interviewer), `text`, `input` ("text" or "voice",
+    for answers), `at` (when it was written, ISO 8601 in UTC) and `state` (the stage of
+    a flow interview the interviewer was in; None otherwise).
+
+    `rows` is what `responses()` returns or a DataFrame from `frame()`, before
+    `unnest()`. `columns` limits it to some questions; default is every interview
+    question found. People who never started the interview contribute no rows.
+    """
+    pd = sys.modules.get("pandas")
+    if pd is not None and isinstance(rows, pd.DataFrame):
+        rows = rows.to_dict("records")
+
+    found: list[str] = []
+    for row in rows:
+        for key, value in row.items():
+            if key not in found and _is_interview_answer(value):
+                found.append(key)
+    targets = found if columns is None else [c for c in found if c in columns]
+    with_respondent = any("respondent_id" in r for r in rows)
+
+    out: list[dict] = []
+    for question in targets:
+        for row in rows:
+            answer = row.get(question)
+            if not _is_interview_answer(answer):
+                continue
+            lead = {"response_id": row.get("response_id")}
+            if with_respondent:
+                lead["respondent_id"] = row.get("respondent_id")
+            lead["completed_at"] = row.get("completed_at")
+            lead["question"] = question
+            lead["mode"] = answer.get("mode")
+            given = 0
+            for number, message in enumerate(answer.get("messages") or [], start=1):
+                if not isinstance(message, dict):
+                    continue
+                role = _ROLES.get(message.get("role"), message.get("role"))
+                if role == "respondent":
+                    given += 1
+                out.append({**lead, "message": number, "role": role,
+                            "answer": given if role == "respondent" else None,
+                            "text": message.get("text"), "input": message.get("input"),
+                            "at": message.get("at"), "state": message.get("state")})
+
+    return out

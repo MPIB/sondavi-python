@@ -37,6 +37,7 @@ SURVEY_ID = SURVEYS[0]
 STUDY_FILES = {
     SURVEYS[0]: ('codebook.json', 'responses_page1.json'),
     SURVEYS[1]: ('codebook_wave2.json', 'responses_wave2.json'),
+    SURVEYS[2]: ('codebook_interview.json', 'responses_interview.json'),
 }
 
 # Two further snapshot ids, each standing for a state the same recorded set can be in.

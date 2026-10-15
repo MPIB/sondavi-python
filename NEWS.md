@@ -1,3 +1,16 @@
+# sondavi 0.6.0
+
+## AI interviews
+
+* `unnest()` writes an AI interview question the way the platform's export and codebook do:
+  `<question>.status`, `.turns`, and where they apply `.answered`, `.skipped` and `.summary`.
+  It used to spread the stored conversation into one column per message and field
+  (`talk.messages.3.text` …), and the columns the codebook names for the question were missing.
+* `conversations(rows)` is the conversation as a long table, one row per message: who
+  wrote it, the respondent's answer number, the text, typed or spoken, and when.
+
+The tests now include a study with AI interviews, recorded from a real run.
+
 # sondavi 0.5.0
 
 ## Scale scores

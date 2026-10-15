@@ -91,6 +91,34 @@ pixels of the original image (`x_px`, `y_px`) — the same table as the platform
 image-markings export. `unnest()` writes these questions the way the CSV export does: one field
 per marking type, cells as row runs (`"2:3-5 3:4"`), pins as `"x,y"` pairs.
 
+## AI interviews
+
+An AI interview question (an interview conducted by a language model inside the questionnaire)
+arrives as the whole conversation. `unnest()` writes the fields the CSV export and the codebook
+have — `<question>.status` (how it ended), `.turns` (answers given), for an interview with a
+list of questions `.answered` and `.skipped` (already covered by an earlier answer), and
+`.summary` when the interview offers summaries. The conversation itself, one row per message:
+
+```python
+from sondavi import conversations
+
+c = pd.DataFrame(conversations(rows))        # before unnest()
+said = c[c.role == "respondent"]
+said.groupby("response_id").text.apply(" ".join)   # all a person said
+said.groupby("input").size()                        # typed or spoken
+```
+
+Each row has `question`, `message` (its place in the conversation), `role` (interviewer or
+respondent), `answer` (the respondent's 1st, 2nd … answer), `text`, `input` (`"text"` or
+`"voice"`) and `at` (when it was written, ISO 8601 in UTC); a flow interview's messages also
+name the stage (`state`). `conversations()` takes a frame from `frame()` as well.
+
+A study run entirely as an interview (the whole questionnaire as a chat) stores the answers
+as usual, plus per question whether and how often the interviewer followed up and the
+exchange about it as text: `unnest()` gives `interview_probing.<question>.was_probed`,
+`.follow_up_count`, `.initial_response` and `.transcript`. The complete conversation of such
+an interview, with recordings, is in the platform's interview-transcript export.
+
 ## Waves of a study series
 
 ```python
