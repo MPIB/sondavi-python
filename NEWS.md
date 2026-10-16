@@ -1,3 +1,17 @@
+# sondavi 0.6.1
+
+## Screened-out participants and bot checks
+
+* A study can now screen people out (the platform's "Screen out participant" rule). Such a
+  person is a row like an unfinished one - `completed_at` is None - and carries
+  `screened_out_at` and `screen_out_reason` instead. `screened_out_at` arrives as a
+  `datetime` like `completed_at`, also in `frame()`.
+* A bot check asked as a question arrives as a field of its own, `"passed"` / `"failed"`
+  (in `frame()` with its labels), and `bot_check_passed` is filled for every study that checks.
+
+The tests now include a study with a screen-out and a bot check question, recorded from a
+real instance.
+
 # sondavi 0.6.0
 
 ## AI interviews

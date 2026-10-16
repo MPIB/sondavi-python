@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import warnings
+from datetime import datetime
 
 # Windows' console is cp1252 by default, and the tick below is not in it: the run died with
 # a UnicodeEncodeError on exactly one of the three CI systems, which hides the cause well.
@@ -75,7 +76,7 @@ print("\nListing and codebook")
 surveys = con.surveys()
 # Read from the recording, not written down: every re-recording creates a fresh study.
 SURVEY = surveys[0]["id"]
-ok("the studies arrive", len(surveys) == 3 and isinstance(SURVEY, int))
+ok("the studies arrive", len(surveys) == 4 and isinstance(SURVEY, int))
 ok("with the privacy level", surveys[0]["privacy"] == "identified")
 
 cb = con.codebook(SURVEY)
@@ -312,6 +313,27 @@ ok("a flow interview's messages say in which stage the interviewer was", [r["sta
 ok("an interview without messages contributes no rows", {r["response_id"] for r in oc} == {1})
 ok("rows without respondent_id give none", "respondent_id" not in oc[0])
 ok("a study without interview questions gives an empty table", conversations(rows) == [])
+
+print("\nScreened out, and a bot check as a question")
+# The fourth study screens people under 18 out and asks a bot check on its second page
+# (SPECS §79, §80): PNL-2 was screened out, PNL-3 failed the check, which only flags.
+SCREENING = surveys[3]["id"]
+srows = con.responses(SCREENING)
+ok("everyone is a row, the screened-out person too", len(srows) == 3)
+ok("the screened-out row has no completed_at", [r["completed_at"] is None for r in srows] == [False, True, False])
+ok("its time of screen-out is a timestamp, like completed_at",
+   isinstance(srows[1]["screened_out_at"], datetime) and srows[0]["screened_out_at"] is None)
+ok("and its reason is there", [r["screen_out_reason"] for r in srows] == [None, "under 18", None])
+ok("the bot check question reads as passed / failed", [r.get("human") for r in srows] == ["passed", None, "failed"])
+ok("the overall bot check result is a yes/no field", [r["bot_check_passed"] for r in srows] == [True, None, False])
+try:
+    import pandas as pd
+    sframe = con.frame(SCREENING)
+    ok("in a data frame the bot check question carries its labels",
+       [None if pd.isna(v) else v for v in sframe["human"]] == ["Passed", None, "Failed"])
+    ok("and the time of screen-out is a datetime column", str(sframe["screened_out_at"].dtype).startswith("datetime64"))
+except (ImportError, RuntimeError) as err:
+    print("  (skipped:", err, ")")
 
 print("\nJoining waves")
 waves = con.waves([s["id"] for s in surveys[:2]], names=["w1", "w2"])

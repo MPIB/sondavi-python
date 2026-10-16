@@ -15,14 +15,16 @@ df   = con.frame(42)                          # pandas, codebook applied
 
 Standard library only; `pandas` is optional and used by `frame()` alone.
 
-`completed_at` and `started_at` arrive as real timestamps in the platform's time zone, and
+`completed_at` and `started_at` (and `screened_out_at`, in a study that screens people out)
+arrive as real timestamps in the platform's time zone, and
 `frame()` applies the codebook — a categorical question becomes a pandas `Categorical` with
 its real labels rather than bare codes.
 
 These are the same rows as the platform's JSON export, which means **partial responses are
 included** when the study saves them: someone who stopped halfway is a row whose
-`completed_at` is empty. `len(rows)` is therefore not the number of completed
-participations.
+`completed_at` is empty. So is someone the study screened out; their row carries
+`screened_out_at` and `screen_out_reason` instead. `len(rows)` is therefore not the number
+of completed participations.
 
 Nested answers — matrices, dynamic panels — stay nested, as the platform sends them.
 `unnest()` spreads them into one field each, under exactly the names the platform's own

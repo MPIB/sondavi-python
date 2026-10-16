@@ -26,7 +26,8 @@ _USER_AGENT = "sondavi-python/0.4.0"
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
 # compare against a datetime without complaining, which is the kind of mistake that
 # reaches a paper.
-_TIMESTAMPS = ("completed_at", "started_at")
+# `screened_out_at` only comes for a study that can screen people out.
+_TIMESTAMPS = ("completed_at", "started_at", "screened_out_at")
 
 
 class ApiError(RuntimeError):
@@ -125,8 +126,9 @@ class Connection:
 
         These are the same rows as the platform's JSON export, which means **partial
         responses are included** when the study saves them: someone who stopped halfway
-        is a row whose `completed_at` is None. `len()` is therefore not the number of
-        completed participations.
+        is a row whose `completed_at` is None. So is someone the study screened out - their
+        row has `screened_out_at` and `screen_out_reason` instead. `len()` is therefore not
+        the number of completed participations.
 
         Afterwards, `fingerprint()` gives the line that belongs next to a published
         result; for a citable dataset use `snapshot()`.
