@@ -1,3 +1,13 @@
+# sondavi 0.7.0
+
+## Every row says what became of it
+
+* Each response now carries `response_status`: `"complete"`, `"partial"` (stopped before the
+  end) or `"screened_out"`. In `frame()` it is a Categorical with all three categories, in
+  this order, so `value_counts()` shows a 0 where nobody was screened out.
+* A status this version does not know is kept as a category of its own, with a warning.
+* The client now names its own version when it talks to the platform (it said 0.4.0).
+
 # sondavi 0.6.1
 
 ## Screened-out participants and bot checks

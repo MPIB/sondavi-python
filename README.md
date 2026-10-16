@@ -24,7 +24,12 @@ These are the same rows as the platform's JSON export, which means **partial res
 included** when the study saves them: someone who stopped halfway is a row whose
 `completed_at` is empty. So is someone the study screened out; their row carries
 `screened_out_at` and `screen_out_reason` instead. `len(rows)` is therefore not the number
-of completed participations.
+of completed participations. Every row says what became of it in `response_status` —
+`"complete"`, `"partial"` or `"screened_out"`:
+
+```python
+done = [r for r in rows if r["response_status"] == "complete"]
+```
 
 Nested answers — matrices, dynamic panels — stay nested, as the platform sends them.
 `unnest()` spreads them into one field each, under exactly the names the platform's own

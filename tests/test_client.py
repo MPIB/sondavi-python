@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
 from sondavi import unnest, markings, conversations, items, scale  # noqa: E402
+from sondavi.client import _with_status_categories  # noqa: E402
 
 # The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
 # machine, and CI runners carry their own listening services.
@@ -324,6 +325,7 @@ ok("the screened-out row has no completed_at", [r["completed_at"] is None for r 
 ok("its time of screen-out is a timestamp, like completed_at",
    isinstance(srows[1]["screened_out_at"], datetime) and srows[0]["screened_out_at"] is None)
 ok("and its reason is there", [r["screen_out_reason"] for r in srows] == [None, "under 18", None])
+ok("every row says what became of it", [r["response_status"] for r in srows] == ["complete", "screened_out", "complete"])
 ok("the bot check question reads as passed / failed", [r.get("human") for r in srows] == ["passed", None, "failed"])
 ok("the overall bot check result is a yes/no field", [r["bot_check_passed"] for r in srows] == [True, None, False])
 try:
@@ -332,6 +334,17 @@ try:
     ok("in a data frame the bot check question carries its labels",
        [None if pd.isna(v) else v for v in sframe["human"]] == ["Passed", None, "Failed"])
     ok("and the time of screen-out is a datetime column", str(sframe["screened_out_at"].dtype).startswith("datetime64"))
+    ok("the status is a Categorical with all three categories, in their order",
+       str(sframe["response_status"].dtype) == "category"
+       and list(sframe["response_status"].cat.categories) == ["complete", "partial", "screened_out"]
+       and list(sframe["response_status"]) == ["complete", "screened_out", "complete"])
+    ok("so a count names the empty category too", sframe["response_status"].value_counts(sort=False).tolist() == [2, 0, 1]
+       if str(sframe["response_status"].dtype) == "category" else False)
+    with warnings.catch_warnings(record=True) as said:
+        warnings.simplefilter("always")
+        odd = _with_status_categories(pd.DataFrame({"response_status": ["complete", "quota_full"]}))
+    ok("a status this version does not know stays, as a category of its own, with a warning",
+       list(odd["response_status"]) == ["complete", "quota_full"] and any("quota_full" in str(w.message) for w in said))
 except (ImportError, RuntimeError) as err:
     print("  (skipped:", err, ")")
 

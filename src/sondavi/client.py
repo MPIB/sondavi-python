@@ -20,7 +20,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.4.0"
+_USER_AGENT = "sondavi-python/0.7.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -28,6 +28,10 @@ _USER_AGENT = "sondavi-python/0.4.0"
 # reaches a paper.
 # `screened_out_at` only comes for a study that can screen people out.
 _TIMESTAMPS = ("completed_at", "started_at", "screened_out_at")
+
+# What became of each response, in this order (the field `response_status`). In `frame()` a
+# Categorical with all three categories, so a count shows 0 for nobody screened out.
+RESPONSE_STATUSES = ("complete", "partial", "screened_out")
 
 
 class ApiError(RuntimeError):
@@ -128,7 +132,9 @@ class Connection:
         responses are included** when the study saves them: someone who stopped halfway
         is a row whose `completed_at` is None. So is someone the study screened out - their
         row has `screened_out_at` and `screen_out_reason` instead. `len()` is therefore not
-        the number of completed participations.
+        the number of completed participations. Every row says what became of it in
+        `response_status` - `"complete"`, `"partial"` or `"screened_out"`:
+        `[r for r in rows if r["response_status"] == "complete"]`.
 
         Afterwards, `fingerprint()` gives the line that belongs next to a published
         result; for a citable dataset use `snapshot()`.
@@ -253,6 +259,7 @@ class Connection:
         # "Already tz-aware, use tz_convert" — the kind of error that only appears once
         # both halves are right.
 
+        df = _with_status_categories(df)
         codebook = self.codebook(survey_id)
         df = _apply_codebook(df, codebook)
         df.attrs["mpi_fingerprint"] = getattr(self, "last_fingerprint", None)
@@ -309,6 +316,23 @@ def _with_real_dates(row: dict, timezone_name: str | None) -> dict:
         row[column] = moment.replace(tzinfo=tz) if tz is not None else moment
 
     return row
+
+
+def _with_status_categories(df):
+    """`response_status` as a Categorical with all three categories, in their order. A value
+    this version does not know stays, as a category of its own, with a warning."""
+    if "response_status" not in df.columns:
+        return df
+    import pandas as pd
+
+    seen = [v for v in pd.unique(df["response_status"]) if isinstance(v, str)]
+    unknown = [v for v in seen if v not in RESPONSE_STATUSES]
+    if unknown:
+        warnings.warn(f"`response_status` holds {_quoted(unknown)}, which this version of the package "
+                      "does not know. It is kept as a category of its own; a newer version may know "
+                      "what it means.", stacklevel=3)
+    df["response_status"] = pd.Categorical(df["response_status"], categories=[*RESPONSE_STATUSES, *unknown])
+    return df
 
 
 def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None = None):
