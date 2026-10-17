@@ -20,7 +20,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.7.0"
+_USER_AGENT = "sondavi-python/0.7.1"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -641,6 +641,9 @@ def items(data, names: list[str], codebook: list[dict] | None = None, reverse: b
     (`b5.worry_r`), so you name the items as they are called in the questionnaire and do
     not need to remember which are worded the other way round. `reverse=False` gives
     every item as answered. An answer that is no number ("dk") is None (NaN in a frame).
+    An item marked "Reverse-scored" whose scale has no numbers (columns `column1`,
+    `column2` …) cannot be mirrored: it is None, with a warning, as its reversed copy is
+    empty in the platform's export.
 
     `data` is what `unnest()` returns: rows (then pass `codebook=con.codebook(42)`) or a
     DataFrame, which carries its codebook. Returns the same kind: rows of numbers, or a
@@ -655,6 +658,14 @@ def items(data, names: list[str], codebook: list[dict] | None = None, reverse: b
 
     variables = {v.get("name"): v for v in codebook}
     copies = _reversed_copies(codebook)
+    # Marked, but no numbers on the scale to mirror against: the platform leaves the reversed
+    # copy empty, and its scale score counts the item as unanswered. Counted as answered, the
+    # unmirrored answer went into the mean.
+    unmirrored = [name for name in names if reverse and name not in copies
+                  and isinstance(variables.get(name, {}).get("reverse_scored"), dict)]
+    if unmirrored:
+        warnings.warn("Marked reverse-scored, but the scale has no numbers to mirror against — counted as "
+                      "unanswered: " + ", ".join(repr(n) for n in unmirrored) + ".", stacklevel=2)
     columns: dict[str, list] = {}
     for name in names:
         if frame:
@@ -672,6 +683,8 @@ def items(data, names: list[str], codebook: list[dict] | None = None, reverse: b
         if reverse and name in copies:
             values = [None if v is None else _whole(copies[name]["sum"] - v) for v in values]
             name = copies[name]["name"]
+        elif name in unmirrored:
+            values = [None] * len(values)
         columns[name] = values
 
     if frame:
@@ -684,11 +697,16 @@ def scale(data, names: list[str], codebook: list[dict] | None = None, min_items:
 
     None (NaN in a frame) for a row with fewer than `min_items` numbers — by default every
     item has to be answered, so a mean over fewer items never happens unnoticed. Lower it to
-    allow gaps, e.g. `min_items=3` for three of four.
+    allow gaps, e.g. `min_items=3` for three of four; more than there are items means every
+    item. The rule is the platform's own (its scale score in the questionnaire gives the same
+    numbers): an item a condition hid from the participant is empty in the data and counts
+    as unanswered.
     """
     need = len(names) if min_items is None else min_items
     if need < 1:
         raise ValueError("min_items has to be at least 1.")
+    # More than there are items means every item, as in the platform's scale score.
+    need = min(need, len(names))
     table = items(data, names, codebook=codebook)
 
     def score(values):

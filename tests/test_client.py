@@ -209,6 +209,23 @@ ok("min_items allows gaps on purpose", scale(flat_r, scale_items, codebook=cb, m
 fails_with("rows need the codebook passed", "codebook=con.codebook", lambda: items(flat_r, scale_items))
 fails_with("an unknown field is named", "b5.nope", lambda: items(flat_r, ["b5.nope"], codebook=cb))
 
+print("\nScale scores: the platform's rule, case by case")
+# The cases of the platform's own scale score (its SPECS §75.6), made there into
+# tests/fixtures/scale_cases.json: codebook and stored answers as the API gives them, and the score
+# the questionnaire computes.
+scale_cases = json.loads((Path(__file__).parent / "fixtures" / "scale_cases.json").read_text(encoding="utf-8"))["cases"]
+for case in scale_cases:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        got = scale([case["data"]], case["items"], codebook=case["codebook"], min_items=case["min_items"])[0]
+    want = case["expected"]
+    ok(case["name"], (want is None and got is None) or (got is not None and want is not None and abs(got - want) < 1e-9))
+noscale = next(c for c in scale_cases if "without a number scale" in c["name"])
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    items([noscale["data"]], noscale["items"], codebook=noscale["codebook"])
+ok("a reverse-scored item with nothing to mirror against says so", any("m.r2" in str(w.message) for w in caught))
+
 # The platform's rules, on answers the recording does not have.
 synthetic_cb = [
     {"name": "q.a", "label": "Item A", "type": "categorical", "reverse_scored": {"min": 1, "max": 7},

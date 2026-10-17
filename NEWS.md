@@ -1,3 +1,19 @@
+# sondavi 0.7.1
+
+## Scale scores as the questionnaire computes them
+
+`scale()` now gives the same numbers as the scale score the platform computes in the
+questionnaire ("Add scale score"). Two cases differed:
+
+* An item marked "Reverse-scored" whose scale has no numbers (columns named `column1`,
+  `column2` …) was counted as answered, unmirrored. It now counts as unanswered, with a
+  warning naming it — its reversed copy is empty in the platform's export, too. `items()`
+  gives it as None.
+* A `min_items` above the number of items gave None for every row. It now means every item.
+
+The package checks itself against the platform's own cases, so the two cannot drift apart
+unnoticed.
+
 # sondavi 0.7.0
 
 ## Every row says what became of it
