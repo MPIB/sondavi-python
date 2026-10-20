@@ -1,0 +1,7 @@
+﻿response_id,response_status,respondent_id,q_text,q_num,q_multi,"Spalte mit Ümlaut","comma,name"
+1,complete,P-001,"He said ""hi"", then left",007,"[1,2]","Grüße 🌍",x
+2,partial,P-002,"line1
+line2",3.10,,NA,"=HYPERLINK(""http://x"",""y"")",invented
+3,complete,P-003,"CRLF
+inside",-0,"a\""b"," leading and trailing ",
+4,screened_out,P-004,,1e5,semi;colon,"	 tab",""""

@@ -85,7 +85,11 @@ def main() -> int:
             return 1
 
         env = dict(os.environ, SONDAVI_TEST_PORT=str(port))
-        return subprocess.call([sys.executable, os.path.join(HERE, "test_client.py")], env=env)
+        client = subprocess.call([sys.executable, os.path.join(HERE, "test_client.py")], env=env)
+        # Certified datasets need no server; they run here so that one command still checks
+        # everything, and a failure in one half does not hide the other.
+        certificates = subprocess.call([sys.executable, os.path.join(HERE, "test_certificates.py")])
+        return client or certificates
     finally:
         server.terminate()
         try:

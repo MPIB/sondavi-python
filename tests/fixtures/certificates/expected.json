@@ -1,0 +1,67 @@
+{
+    "dataset": {
+        "status": "valid",
+        "removed_columns": [
+            "ip_address"
+        ],
+        "removed_rows": 0,
+        "added_columns": []
+    },
+    "redacted": {
+        "status": "valid",
+        "removed_columns": [
+            "respondent_id",
+            "ip_address"
+        ],
+        "removed_rows": 1,
+        "added_columns": []
+    },
+    "tampered": {
+        "status": "modified",
+        "modified_cells": [
+            {
+                "row": 3,
+                "column": "q_num"
+            }
+        ]
+    },
+    "too_long": {
+        "status": "unverifiable",
+        "problems": [
+            "Data row 2 has 9 fields, the header 8."
+        ]
+    },
+    "redaction": {
+        "drop_columns": [
+            "respondent_id"
+        ],
+        "drop_rows": [
+            2
+        ]
+    },
+    "file": {
+        "status": "valid",
+        "removed_columns": [
+            "ip_address"
+        ],
+        "removed_rows": 2,
+        "added_columns": []
+    },
+    "file_tampered": {
+        "status": "modified"
+    },
+    "derived": {
+        "status": "valid",
+        "removed_columns": [
+            "q_multi",
+            "ip_address"
+        ],
+        "removed_rows": 1,
+        "added_columns": []
+    },
+    "derived_from": {
+        "certificate": "00000000-0000-4000-8000-000000000086",
+        "file": "dataset.csv",
+        "kind": "cells"
+    }
+}

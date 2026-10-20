@@ -1,3 +1,40 @@
+# sondavi 0.8.0
+
+## Verifying a certified dataset
+
+* `verify(data, certificate)` checks a certified dataset — a CSV file the platform issued with
+  a `.certificate.json` — and returns a `Verification`: whether every certified cell is what
+  participants entered, which survey, organisation and issuer it belongs to, which columns and
+  rows were left out and which columns are in the file without being certified — appended
+  ones, and a removed column put back. `print()` it for a summary; it is true only when the
+  file is valid.
+* The file is read strictly, exactly as the platform reads it: UTF-8, quotes as in RFC 4180,
+  every row as wide as the header. A file two programs could read differently — a stray quote,
+  a lone carriage return, a NUL, a row with more fields than the header — cannot be verified.
+* The summary sorts the columns of the file as the platform's verify page does, each in one
+  place: certified, in the file but not certified (left out when the certificate was issued,
+  computed by the platform, or added afterwards) and missing from the file;
+  `Verification.column_groups()` gives the same as lists. It also names the values the
+  participant's browser reported and the responses collected offline.
+* Only `https://sondavi.io` is trusted unless you name another installation with `trust=`.
+  The keys of `https://sondavi.io` published when this version was made come with the
+  package, so a certificate signed with one of them is checked without a connection. Any
+  other key is fetched from the issuer, or given with `keys=` to check offline.
+* A certified *file* — your own CSV, Excel or JSON file, compared by the platform with the
+  stored responses or with a file certified earlier — is checked by its fingerprint, whatever
+  its format: valid when it is that very file, modified otherwise. `result.basis` and the
+  printed summary say how the platform read it, how many responses of the survey it holds,
+  which were left out (incomplete, screened out, by group), which columns are your own, which
+  are written differently, and which certificate it was derived from.
+* To share fewer columns or rows, or another format, certify the changed file on the platform
+  that issued the certificate; that works even after the responses were deleted there.
+  Deleting columns or rows by hand, or opening the file in a spreadsheet program and saving it
+  again, makes the certificate fail.
+* Still the standard library alone — the signature check is part of the package.
+
+The package checks itself against certificates the platform itself issued, so the two cannot
+read a file differently unnoticed.
+
 # sondavi 0.7.1
 
 ## Scale scores as the questionnaire computes them

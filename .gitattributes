@@ -2,3 +2,7 @@
 # scheitert dann am \r hinter der Shebang -- auf genau einem der drei Systeme, was die
 # Ursache gut versteckt.
 *.sh text eol=lf
+
+# The certified fixtures are compared byte for byte: a line break inside a quoted cell
+# (CRLF) is part of a certified value, so git must not touch their line endings.
+tests/fixtures/certificates/** -text

@@ -1,0 +1,301 @@
+{
+  "about": "How a certified CSV is read (SPECS §86.10, docs/CERTIFICATE-FORMAT.md §5.1). Every verifier must give exactly this: the header and rows, or \"invalid\". The bytes are base64.",
+  "cases": [
+    {
+      "name": "lines end with LF",
+      "base64": "YSxiCjEsMgo=",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "lines end with CRLF",
+      "base64": "YSxiDQoxLDINCg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "no line break at the end",
+      "base64": "YSxiCjEsMg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "quoted field with delimiter, quote and line breaks",
+      "base64": "YSxiCiJ4LCIieSIiDQp6IiwyCg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "x,\"y\"\r\nz",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "one BOM is removed",
+      "base64": "77u/YSxiCjEsMgo=",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "a second BOM belongs to the first name",
+      "base64": "77u/77u/YSxiCjEsMgo=",
+      "result": [
+        [
+          "﻿a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "a lone CR outside quotes",
+      "base64": "YSxiDTEsMgo=",
+      "result": "invalid"
+    },
+    {
+      "name": "a quote inside an unquoted field",
+      "base64": "YSxiCngieSwyCg==",
+      "result": "invalid"
+    },
+    {
+      "name": "text after a closing quote",
+      "base64": "YSxiCiJ4InksMgo=",
+      "result": "invalid"
+    },
+    {
+      "name": "a space before a quote",
+      "base64": "YSxiCiAieCx5IiwyCg==",
+      "result": "invalid"
+    },
+    {
+      "name": "an unterminated quote",
+      "base64": "YSxiCiJ4LDIK",
+      "result": "invalid"
+    },
+    {
+      "name": "a NUL byte",
+      "base64": "YSxiCjEALDIK",
+      "result": "invalid"
+    },
+    {
+      "name": "invalid UTF-8",
+      "base64": "YSxiCv8sMgo=",
+      "result": "invalid"
+    },
+    {
+      "name": "a control character in a header name",
+      "base64": "YQEsYgoxLDIK",
+      "result": "invalid"
+    },
+    {
+      "name": "an empty line in the middle",
+      "base64": "YSxiCjEsMgoKMyw0Cg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ],
+          [
+            "3",
+            "4"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "empty lines before the header",
+      "base64": "CgphLGIKMSwyCg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "a line of two quotes is a row, not an empty line",
+      "base64": "YSxiCiIiCjEsMgo=",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            ""
+          ],
+          [
+            "1",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "in a one-column file an empty line is an empty cell",
+      "base64": "YQoxCgoyCg==",
+      "result": [
+        [
+          "a"
+        ],
+        [
+          [
+            "1"
+          ],
+          [
+            ""
+          ],
+          [
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "an empty file",
+      "base64": "",
+      "result": [
+        [],
+        []
+      ]
+    },
+    {
+      "name": "a delimiter at the end of a line",
+      "base64": "YSxiLAoxLDIsCg==",
+      "result": [
+        [
+          "a",
+          "b",
+          ""
+        ],
+        [
+          [
+            "1",
+            "2",
+            ""
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "a delimiter at the end of the file",
+      "base64": "YSxiCjEs",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "1",
+            ""
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "only a header",
+      "base64": "YSxiCg==",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        []
+      ]
+    },
+    {
+      "name": "a tab inside a value is kept",
+      "base64": "YSxiCiJ4CXkiLDIK",
+      "result": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          [
+            "x\ty",
+            "2"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "non-ASCII text",
+      "base64": "R3LDvMOfZSzwn4yNCsOkLMOfCg==",
+      "result": [
+        [
+          "Grüße",
+          "🌍"
+        ],
+        [
+          [
+            "ä",
+            "ß"
+          ]
+        ]
+      ]
+    }
+  ]
+}

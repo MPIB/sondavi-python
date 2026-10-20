@@ -1,0 +1,98 @@
+{
+    "type": "sondavi-certificate",
+    "version": 1,
+    "manifest": "{\"type\":\"sondavi-certificate-manifest\",\"version\":1,\"id\":\"00000000-0000-4000-8000-000000000086\",\"issued_at\":\"2026-10-20T08:00:00Z\",\"issuer\":{\"name\":\"Sondavi (test)\",\"url\":\"https://certificates.example\"},\"key_id\":\"ed25519:34750f98bd59fcfc\",\"organization\":\"Test Organisation\",\"survey\":{\"id\":86,\"title\":\"TEST Certified\",\"version\":3,\"definition_sha256\":\"abababababababababababababababababababababababababababababababab\",\"privacy\":\"pseudonymized\"},\"responses\":{\"first\":\"2026-10-01T09:00:00Z\",\"last\":\"2026-10-19T17:30:00Z\"},\"file\":\"dataset.csv\",\"rows\":4,\"columns\":[{\"name\":\"response_id\",\"root\":\"5778ff714b458996fb086f92f8effd5c480e16ac6ac28081c41cd92dc99d6946\"},{\"name\":\"response_status\",\"root\":\"2b2f85311b69e43eab6692e7ad49ac9f4a615baed41e166ae1acfc1be571295a\"},{\"name\":\"respondent_id\",\"root\":\"3f841be8186bfda2e63c7c5e1caa98f3449c9b8c0587635e8d37510c3ef65733\"},{\"name\":\"q_text\",\"root\":\"001ff8389abcd8e58f80b0c36ec00c3c12b6a0f1a915dd6c5fe039c6dea15151\"},{\"name\":\"q_num\",\"root\":\"b827f856806097d4cec806a952677e144c33decb9e30e82bd5897acd4cabb1ad\"},{\"name\":\"q_multi\",\"root\":\"c87a89fd43d447d05baef003a32dd5f73ed8c5718fa8b74eb4ecf88e3d3ec0a1\"},{\"name\":\"ip_address\",\"root\":\"f245805926afc36e6865c3e3677d00b91c95f087c560297b6b78664af64695e5\"},{\"name\":\"Spalte mit Ümlaut\",\"root\":\"4ee86c03dcbc9ca3bba6e9579cc03aa9c334dff34ea45609755359a52607460c\"},{\"name\":\"comma,name\",\"root\":\"1accc4f97eaa829ea119b40809557cfed4e5317c9cac6d6b9627591cafdf994d\"}],\"row_roots\":[\"8a34347369bf5893849f254a8a0bb03edf37d32a394538cde097e28e79419229\",\"1516c8d528ab80c0f2efc8086aaf874854ca84f208ba5d46d564c4dd51050312\",\"b29bbcaf0511a9d75ba38d7d2fb4bbf78653e7839459b6a2865f3c1f544dca58\",\"c857329af379b014a5710baf40e6ea97b0108c240d8e1132ad50fa4f90148522\"]}",
+    "signature": "pmHslkn4qcRAPpZsTabC/CNpQ9SPYXOFK9uplcMf4Oxf0XERAPNEgCVQVXpdlbtBxr57IOuDBJXzPEvU9/YiDQ==",
+    "proof": {
+        "rows": [
+            0,
+            2,
+            3
+        ],
+        "columns": [
+            {
+                "name": "response_id",
+                "salts": [
+                    "26ff5dda6cda029fcc2ff7f0eb6d2e5c",
+                    "-b060bfd7ad39340baa36c3e0163dc0dcfe5dbb722ac57b565fbc599f73aa0b40",
+                    "24b7c5298d7d0237b271898212bafc52",
+                    "9f0920528689266cdfef86ad3d846f2a"
+                ]
+            },
+            {
+                "name": "response_status",
+                "salts": [
+                    "1b8b56b18eb8e4dc9efa41ebc0962cd3",
+                    "-c8804825b26fdb053e2f9baf99a490bf10e89bb864ef298cac38abc8533e1f4c",
+                    "a9bd390351917d71ebeb6ed9582a450f",
+                    "f4690575b37bf5d440487dec5aa45644"
+                ]
+            },
+            {
+                "name": "respondent_id",
+                "removed": true,
+                "leaves": [
+                    "998c910f66ccf273b92b1a77c163b8115ed071a7125b77b921d2cac1d1bb86c8",
+                    "0d59417746c63866ecd85e90357f49cf8953bf8cba54cee02e3442ddc29ec96c",
+                    "4191801684e6114aa4ce5e0a3687918ea939d7971512b4d0a740fa535cee5f2f",
+                    "be23df499aa83aeeb6f1ef99a007f6386b4e37cfe07948cdbd90f6fbf6f70860"
+                ]
+            },
+            {
+                "name": "q_text",
+                "salts": [
+                    "7e274c3442ead5b3357689da8610595b",
+                    "-e1a3ac438adce579c9f341bc1b540220b2f60308e4eec393089600689cbd5968",
+                    "bc5237a06bc3e0198943f98e6d4c6e1b",
+                    "56c0a4b0f4005f9f654259f28bc9b50f"
+                ]
+            },
+            {
+                "name": "q_num",
+                "salts": [
+                    "1a12dd96550271ea69127019fe8502cd",
+                    "-1bda4ac35221c64bf3ee84189239f83eb4f2571a58ba9d717e9ebbd2cd427759",
+                    "d1e8867740655abb0ecf11246ffedb12",
+                    "782358b8c9124e96e8b2fc11275b5380"
+                ]
+            },
+            {
+                "name": "q_multi",
+                "salts": [
+                    "b291087e58207a9523a4bba603b82e1a",
+                    "-3b1d8ba402cf2be88e786cc6c144107c471719aa1f135e3ed155e5d9c0caf67f",
+                    "ad2f39731b3a4dbc982b4cb1746359e2",
+                    "6dcbd4b3604e3c777db071301d8665e9"
+                ]
+            },
+            {
+                "name": "ip_address",
+                "removed": true,
+                "leaves": [
+                    "6f57cc4cfe091c896d6de71189ac270dd018d8f429062d5bb68f43b156a6401b",
+                    "6ad6ec8a79a1d87865710150fce2b06552288c5d4c638ef074cc3a1446fe7d32",
+                    "ad7b4f0996a658575c4f3cf2762d6384ef4217e76612117310973440680bd9a8",
+                    "25f9e0889f6e8398519790137cd540a90ac4a521a4754890b45de87cca51b941"
+                ]
+            },
+            {
+                "name": "Spalte mit Ümlaut",
+                "salts": [
+                    "0d49b7098b14cb49cc7a60267108b160",
+                    "-feab958f47259a82b29081f464891ee7308c07ef8d4e3bd7f69ffa07c0ac1da5",
+                    "90fc63c6f20b7bfe3bc5252f763afae9",
+                    "9cf7436331d20e4804a6f1d982701ecd"
+                ]
+            },
+            {
+                "name": "comma,name",
+                "salts": [
+                    "94b0d296a5eec9bb5c13310795345d34",
+                    "-37817ed608933e0fb2ec96a28f37e91919bc7324b13903f9e8679b5c0de32bcb",
+                    "31b76f3bcb3f7d718458fea33c241d38",
+                    "1f39359d8ca3e1b3e8b64f1578a49795"
+                ]
+            }
+        ]
+    }
+}

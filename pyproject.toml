@@ -1,6 +1,6 @@
 [project]
 name = "sondavi"
-version = "0.7.1"
+version = "0.8.0"
 description = "Read your own study data from the Sondavi survey platform"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -26,3 +26,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# The keys of https://sondavi.io, saved when the version was made: certificates signed with
+# them are checked without asking the platform.
+[tool.setuptools.package-data]
+sondavi = ["certificate-keys.json"]

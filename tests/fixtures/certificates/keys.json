@@ -1,0 +1,14 @@
+{
+    "issuer": {
+        "name": "Sondavi (test)",
+        "url": "https://certificates.example"
+    },
+    "keys": [
+        {
+            "id": "ed25519:34750f98bd59fcfc",
+            "algorithm": "Ed25519",
+            "public_key": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+            "status": "active"
+        }
+    ]
+}

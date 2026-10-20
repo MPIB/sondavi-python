@@ -8,10 +8,19 @@
 The token belongs in the environment, not in the script: a token written into an
 analysis travels with it into version control, onto shared drives and into
 supplementary material. That is the usual way one leaks.
+
+A certified dataset - a CSV file the platform issued with a `.certificate.json` - is checked
+without a connection or a token:
+
+    from sondavi import verify
+
+    print(verify("study.csv", "study.certificate.json"))
 """
 
 from .client import Connection, ApiError, connect, unnest, markings, conversations, items, scale
 from .snapshots import Snapshot
+from .certificates import Verification, verify
 
-__all__ = ["connect", "Connection", "ApiError", "Snapshot", "unnest", "markings", "conversations", "items", "scale"]
-__version__ = "0.7.1"
+__all__ = ["connect", "Connection", "ApiError", "Snapshot", "unnest", "markings", "conversations", "items", "scale",
+           "verify", "Verification"]
+__version__ = "0.8.0"

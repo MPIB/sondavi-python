@@ -175,6 +175,95 @@ A snapshot records *which* responses belonged to the set, never a copy of them �
 retention and the right to erasure keep working. If rows have gone since, you are told,
 rather than handed a smaller set as if nothing had happened.
 
+## Verifying a certified dataset
+
+A certified dataset is a CSV file the platform issued together with a `.certificate.json`.
+The certificate is signed by the platform, not by whoever shares the file, so a reviewer, a
+journal or a co-author can check that every certified cell is what participants entered —
+without an account or a token:
+
+```python
+import sondavi
+
+result = sondavi.verify("study.csv", "study.certificate.json")
+print(result)
+#> Valid: every certified cell matches.
+#>   Survey:          Wellbeing at work (version 3 of the questionnaire, privacy: pseudonymized)
+#>   Organisation:    …
+#>   Removed columns: respondent_id
+#>   …
+if not result:                       # true only when valid
+    print(result.status, result.problems)
+```
+
+Pass the **files**, not a DataFrame: reading a file into pandas has already converted the
+cells — "007" became 7, "NA" became missing — and the certificate is over the text as it
+stands in the file. The file is read strictly, exactly as the platform reads it: UTF-8, quotes
+as in RFC 4180, and every row exactly as wide as the header. A file that two programs could read
+differently — a stray quote, a lone carriage return, a NUL, a row with more fields than the
+header — is `unverifiable`.
+
+Columns the platform computes when it writes the file — attention checks, quality scores, the
+reversed `_r` copies — are in the file but not certified: they follow the questionnaire as it was
+that day. The summary lists them as computed, and it names the values the participant's browser
+reported rather than the platform measured (start time and duration, for instance).
+
+`result.status` is `valid`, `modified` (the certificate is genuine, but cells differ:
+`result.modified_cells` names each by data row, counted from 1 below the header, and column),
+`unverifiable` (the file does not fit the certificate, e.g. a certified column is missing;
+`result.problems` says what), `invalid_signature` (the certificate itself was altered),
+`unknown_key`, `untrusted_issuer` or `malformed`. `removed_columns`, `removed_rows` and
+`added_columns` say what was left out and what is in the file without being certified —
+appended columns are allowed, and so is a removed column put back, but neither counts as
+certified. When cells differ in several rows *and* several columns, `suspect` is
+True: the certificate holds one sum per row and one per column, so the listed cells are the
+candidates, not each of them changed.
+
+**Whom to trust is your decision.** Only `https://sondavi.io` counts by default; a
+certificate from another installation of the platform reports `untrusted_issuer` until you
+name it, `verify(..., trust=["https://surveys.example.org"])` — otherwise anyone with a key
+and an address of their own could issue "genuine" certificates.
+
+**The keys.** The package carries the public keys of `https://sondavi.io` that were published
+when its version was made, and a certificate signed with one of them is checked without a
+connection. Any other key — a newer one, or another installation's — is fetched from
+`<issuer>/.well-known/sondavi-certificate-keys.json`. To check offline in every case, save
+that file once and pass `keys="sondavi-keys.json"`; keys you pass are then the only ones used.
+A key counts only under its own id, `ed25519:` and the first 16 hex digits of its SHA-256.
+
+A certificate can also cover **a file you already had** — your own CSV, Excel or JSON export,
+which the platform compared with the stored responses, or with a file it certified earlier,
+before signing it. Check it the same way, whatever its format:
+
+```python
+result = sondavi.verify("cleaned.xlsx", "cleaned.certificate.json")
+print(result)
+#> Valid: this is the file that was certified, unchanged to the last byte.
+#>   …
+#>   Read as:             Excel, sheet "Data"
+#>   Rows matched:        by response ID
+#>   In the file:         412 of 430 responses of this survey
+#>   Left out:            18 responses: 15 incomplete, 3 screened out
+#>   Own columns:         my_rating (not checked)
+#>   Written differently: q_num (12 cells) - the same value in another notation
+result.basis                         # everything the comparison found, as a dict
+```
+
+Such a certificate is over the file's bytes, not over single cells: the file is valid exactly
+when it is the file that was certified, and otherwise reported as modified without naming
+cells.
+
+**To share fewer columns or rows** — a pseudonym, or people who did not agree to their answers
+being shared — or the data in another format, certify the changed file on the platform that
+issued the certificate ("Certify a file you have"). The platform compares it with the certified
+file, so this works even after the responses were deleted there; the new certificate says which
+columns and responses are left out, and its summary names the certificate it was derived from.
+Deleting columns or rows by hand, or **opening the file in a spreadsheet program and saving it
+again** — which rewrites numbers and dates, "007" becomes "7", "-0" becomes "0" — makes the
+certificate fail. Keep the file as it came, and work on a copy.
+
+All of this runs on the standard library, the Ed25519 signature check included.
+
 ## Tests
 
 ```
@@ -183,3 +272,8 @@ python tests/run.py
 
 Replays **real answers captured from the platform** (`tests/fixtures/`), including the
 one recorded after a response was erased. No network, no credentials.
+
+The checks of certified datasets need no fixture server; `tests/run.py` runs them too, and
+they run on their own with `python tests/test_certificates.py` (or
+`python -m unittest tests/test_certificates.py`). They read certificates the platform itself
+issued (`tests/fixtures/certificates/`).

@@ -1,0 +1,16 @@
+{
+    "issuer": {
+        "name": "Sondavi",
+        "url": "https://sondavi.io"
+    },
+    "keys": [
+        {
+            "id": "ed25519:cd20da830f1e5f13",
+            "algorithm": "Ed25519",
+            "public_key": "/27pAU8LhJyVoB9WnmqVqM82aq/2RrucW1Ua2vz+Z14=",
+            "status": "active"
+        }
+    ],
+    "saved_from": "https://sondavi.io/.well-known/sondavi-certificate-keys.json",
+    "saved_at": "2026-10-20T18:25:23Z"
+}
