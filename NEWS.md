@@ -1,3 +1,45 @@
+# sondavi 0.9.0
+
+## Scale scores of the questionnaire, worked out again
+
+* `scale(data, score="sdq_emo")` works out a scale score the questionnaire computes itself
+  (Σ in the editor): the codebook now says which rows it counts - those of its subscales, in a
+  loop those of the same copy -, mean or sum, and how many have to be answered. That is the
+  way to give responses recorded before a score was added or changed the score of now; the
+  platform keeps every response's score as it was computed then. Needs a platform that
+  describes its scale scores (version 0.106 or later); with an older one, name the items.
+* `scale()` takes `method="sum"` as well as the mean, and gives whole numbers as the platform
+  writes them (4, not 4.0) for rows.
+* The codebook carries `subscale` on a matrix row and `scale_score` on a scale score.
+
+## Questions with several answers
+
+* `options()` gives one field per option of a multiple-choice question, a tag box, a picture
+  choice or a ranking, as the export files have them: 1 when the option was chosen, 0 when the
+  question was answered without it, None when it was not answered; for a ranking the option's
+  place. In a frame the columns are integers that can be missing (`Int64`).
+* `unnest()` adds those fields right after the list (`options=False` leaves them out).
+
+## Tested against more of what researchers ask
+
+The tests now include a study with multiple choice ("None", "Other" with its text), a tag box,
+a ranking, a rating, yes/no, a drop-down with "Don't know", text boxes, a constant sum with its
+total, an SDQ-like matrix with subscales and the questionnaire's own scale scores, and a loop
+with a score per copy - recorded from the platform, and checked value by value against the
+platform's own export file. The platform's scale score cases now include sums.
+
+## The files participants uploaded
+
+`con.files(survey_id)` downloads the files of a study's "File Upload" questions and unpacks
+them: a folder per question, the files named by response (`drawing/1234-1.png`) rather than by
+the name a participant gave them, and a list with one row per file - whose it is
+(`response_id`, and `respondent_id` where your token may read it), the original name, type,
+size, checksum and `local_path`, where the file now is. Join it to `responses()` over
+`response_id`.
+
+In the responses themselves an uploaded file now appears as its name, type, size and a
+reference; the file is no longer in the row.
+
 # sondavi 0.8.0
 
 ## Verifying a certified dataset

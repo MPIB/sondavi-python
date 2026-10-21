@@ -80,6 +80,46 @@ In a frame the items are Categoricals, and their codes are positions, not answer
 "Don't know" and other answers that are no number count as missing here; by default every
 item has to be answered, so a mean over fewer items never happens unnoticed.
 
+A scale score the questionnaire computes itself (Σ in the editor, with subscales if the matrix
+rows have them) is stored with each response as it was computed then. To work it out again — for
+responses recorded before you added or changed it — name it; the codebook supplies its rows,
+mean or sum, and its minimum. `method="sum"` adds instead of averaging when you name the items
+yourself:
+
+```python
+df["sdq_emo_now"] = scale(df, score="sdq_emo")                # the emotional subscale, summed
+scale(flat, ["sdq.e1", "sdq.e2"], codebook=cb, method="sum")   # the same by hand
+```
+
+`score=` needs a platform that describes its scale scores in the codebook (version 0.106 or later).
+
+## Questions with several answers
+
+A multiple-choice answer, a tag box or a ranking arrives as the list of options chosen and stays
+one field. `unnest()` adds one field per option right after it, as the export files have them —
+1 chosen, 0 answered without it, None (NA in a frame) not answered; for a ranking the option's
+place. `options(rows, codebook=cb)` does the same without unnesting anything else.
+
+```python
+flat = unnest(con.frame(42))
+flat["devices.phone"].value_counts()
+```
+
+## Uploaded files
+
+A "File Upload" answer in the responses is the file's name, type, size and a reference; the
+files themselves come with `files()`:
+
+```python
+files = con.files(42)                  # unpacked into sondavi-files-42/
+drawings = [f for f in files if f["question"] == "drawing"]
+drawings[0]["local_path"]
+```
+
+A folder per question, the files named by response (`drawing/1234-1.png`), never by the name
+a participant gave them — so the drawings of one task can be rated without seeing whose they
+are. Join to the responses over `response_id`.
+
 ## Image marking
 
 An image marking question (participants paint areas or set pins on a map or picture) arrives

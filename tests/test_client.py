@@ -23,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from sondavi import ApiError, connect  # noqa: E402
 import sondavi.snapshots  # noqa: E402,F401  (attaches the snapshot methods)
-from sondavi import unnest, markings, conversations, items, scale  # noqa: E402
-from sondavi.client import _with_status_categories  # noqa: E402
+from sondavi import unnest, options, markings, conversations, items, scale  # noqa: E402
+from sondavi.client import _with_status_categories, _is_missing  # noqa: E402
 
 # The port comes from tests/run.py, which picks a free one: a fixed port is a bet on the
 # machine, and CI runners carry their own listening services.
@@ -77,7 +77,7 @@ print("\nListing and codebook")
 surveys = con.surveys()
 # Read from the recording, not written down: every re-recording creates a fresh study.
 SURVEY = surveys[0]["id"]
-ok("the studies arrive", len(surveys) == 4 and isinstance(SURVEY, int))
+ok("the studies arrive", len(surveys) == 5 and isinstance(SURVEY, int))
 ok("with the privacy level", surveys[0]["privacy"] == "identified")
 
 cb = con.codebook(SURVEY)
@@ -217,7 +217,8 @@ scale_cases = json.loads((Path(__file__).parent / "fixtures" / "scale_cases.json
 for case in scale_cases:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        got = scale([case["data"]], case["items"], codebook=case["codebook"], min_items=case["min_items"])[0]
+        got = scale([case["data"]], case["items"], codebook=case["codebook"], min_items=case["min_items"],
+                    method=case["method"])[0]
     want = case["expected"]
     ok(case["name"], (want is None and got is None) or (got is not None and want is not None and abs(got - want) < 1e-9))
 noscale = next(c for c in scale_cases if "without a number scale" in c["name"])
@@ -481,6 +482,126 @@ try:
     ok("and nothing else is warned about", len(caught_top) == 1)
 except RuntimeError as err:
     print("  (skipped:", err, ")")
+
+print("\nUploaded files (SPECS §87)")
+import hashlib  # noqa: E402
+import tempfile  # noqa: E402
+
+rows_for_files = con.responses(SURVEY)
+first_upload = next(r for r in rows_for_files if r.get("drawing"))
+ok("a response names its files and refers to them, the file is not in it",
+   all(str(f["content"]).startswith("sondavi-file:") and "name" in f and "size" in f for f in first_upload["drawing"]))
+with tempfile.TemporaryDirectory() as folder:
+    files = con.files(SURVEY, folder=folder)
+    ok("every uploaded file arrives, one row each", len(files) == 3)
+    by_name = {f["original_name"]: f for f in files}
+    anna = by_name.get("Anna drawing.png", {})
+    ok("each row says whose file it is and where it now lies",
+       anna.get("response_id") == first_upload["response_id"] and anna.get("question") == "drawing"
+       and anna.get("file_number") == 1 and os.path.isfile(anna.get("local_path", "")))
+    ok("the file on disk is the one uploaded (sha256, size)",
+       hashlib.sha256(Path(anna["local_path"]).read_bytes()).hexdigest() == anna["sha256"]
+       and Path(anna["local_path"]).stat().st_size == anna["size"])
+    ok("files are named by response, never by the name the participant gave",
+       all("Anna" not in f["path"] and "Cleo" not in f["path"] for f in files)
+       and anna["path"] == f"drawing/{anna['response_id']}-1.png")
+    ok("the token may read identifiers, so the respondent is named", anna.get("respondent_id") == "PNL-1")
+    notes = by_name.get("notes.txt", {})
+    ok("a text file is listed with its type and its size in bytes",
+       notes.get("type") == "text/plain" and notes.get("size") == len("two lines\nof notes".encode()))
+with tempfile.TemporaryDirectory() as folder:
+    plain = connect(BASE, "sdv_" + "P" * 48).files(SURVEY, folder=folder)
+    ok("without the ability to read identifiers there is no respondent_id",
+       len(plain) == 3 and all("respondent_id" not in f for f in plain))
+
+with tempfile.TemporaryDirectory() as folder:
+    fails_with("a 404 for the files names an older platform as one reason", "0.106", lambda: con.files(surveys[1]["id"], folder=folder))
+
+print("\nThe question types used most (a study of its own)")
+# The fifth study holds what the first does not: multiple choice with None and Other, a tag box, a ranking, a
+# rating, yes/no, a drop-down with Don't know, text boxes, a constant sum with its total, an SDQ-like matrix with
+# subscales and the questionnaire's own scale scores, and a loop with a score per copy. The platform's export file of
+# the same study is the yardstick (tests/fixtures/export_types_flat.json).
+TYPES = next(sv["id"] for sv in surveys if sv["title"] == "TEST Types study")
+ty = con.responses(TYPES)
+ty_cb = con.codebook(TYPES)
+ty_export = json.loads((Path(__file__).parent / "fixtures" / "export_types_flat.json").read_text(encoding="utf-8"))
+
+
+def as_export(value):
+    """A value as the export file writes it: empty for nothing, else its text."""
+    if _is_missing(value) or (isinstance(value, str) and value == ""):
+        return None
+    # A frame's column is float: 6.0 is the platform's 6.
+    return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+
+
+def same_as_export(values, column):
+    return [as_export(v) for v in values] == [as_export(r.get(column)) for r in ty_export]
+
+
+ok("multiple choice arrives as the list of options chosen, None and Other included",
+   ty[0]["devices"] == ["phone", "other"] and ty[1]["devices"] == ["none"] and ty[0]["devices-Comment"] == "smartwatch")
+ok("a rating is a number, yes/no true/false, Don't know its own code",
+   [r.get("satisfied") for r in ty] == [4, 2, 5] and [r.get("consent") for r in ty] == [True, False, None]
+   and [r.get("country") for r in ty] == ["de", "dontknow", None])
+ok("the seed of SurveyJS' random orders comes along as a field of its own", [r.get("__random_seed") for r in ty] == [1000, 1001, 1002])
+
+opts = options(ty, codebook=ty_cb)
+option_fields = [k for k in opts[0] if k.split(".")[0] in ("devices", "apps", "rank") and "." in k]
+keys0 = list(opts[0])
+ok("one field per option, the codebook's options in its order, right after the question",
+   keys0[keys0.index("devices") + 1:keys0.index("devices") + 6] == [f"devices.{o}" for o in ("phone", "laptop", "tablet", "none", "other")])
+ok("every option field has the export file's values, row by row (1 chosen, 0 not, empty unanswered; a ranking's place)",
+   len(option_fields) == 11 and all(same_as_export([r.get(f) for r in opts], f) for f in option_fields))
+ok("an unanswered question gets its option fields too, empty", all(opts[2].get(f, "absent") is None for f in option_fields))
+ok("the question's own list stays", opts[0]["devices"] == ["phone", "other"])
+ok("names= picks the questions",
+   [k for k in options(ty, ["rank"], codebook=ty_cb)[0] if k.startswith("rank.")] == ["rank.family", "rank.friends", "rank.school"])
+fails_with("a field that is no list of options is refused", "satisfied", lambda: options(ty, ["satisfied"], codebook=ty_cb))
+
+tf = unnest(ty, codebook=ty_cb)
+ok("unnest() keeps a multiple choice whole and adds the option fields",
+   tf[0]["devices"] == ["phone", "other"] and all(same_as_export([r.get(f) for r in tf], f) for f in option_fields)
+   and not any(k.startswith("devices.0") for r in tf for k in r))
+ok("options=False keeps only the lists", not any(f in unnest(ty, codebook=ty_cb, options=False)[0] for f in option_fields))
+ok("text boxes, a constant sum and its total spread like the export",
+   [r.get("contact.phone") for r in tf[:2]] == ["+49 30 123", "+43 1 999"]
+   and same_as_export([r.get("split-total.points") for r in tf], "split-total.points")
+   and same_as_export([r.get("split.o2.points") for r in tf], "split.o2.points"))
+
+print("\nThe questionnaire's own scale scores, worked out again")
+by_name = {v["name"]: v for v in ty_cb}
+ok("the codebook names each row's subscale", [by_name[n].get("subscale") for n in ("sdq.e1", "sdq.c1", "sdq.p1")] == ["emo", "con", "pro"])
+ok("and how each score is worked out",
+   by_name["sdq_total"]["scale_score"] == {"matrix": "sdq", "method": "sum", "min_items": 3, "subscales": ["emo", "con"],
+                                           "items": ["sdq.e1", "sdq.e2", "sdq.c1", "sdq.c2"]})
+for score_name in ("sdq_emo", "sdq_con", "sdq_total", "sdq_mean", "child.0.k_score", "child.1.k_score"):
+    got = scale(tf, codebook=ty_cb, score=score_name)
+    ok(f'score="{score_name}" gives the stored score of every row (and the export\'s)',
+       got == [r.get(score_name) for r in tf] and same_as_export(got, score_name))
+ok('method="sum" by hand gives the same as the subscale\'s score', scale(tf, ["sdq.e1", "sdq.e2"], codebook=ty_cb, method="sum") == [3, None, None])
+ok("a sum over fewer items when fewer are asked for", scale(tf, ["sdq.e1", "sdq.e2"], codebook=ty_cb, min_items=1, method="sum") == [3, 1, None])
+ok("the score's minimum can be lowered on purpose", scale(tf, codebook=ty_cb, score="sdq_emo", min_items=1) == [3, 1, None])
+ok("a row of the score nobody answered (b in the second child) is simply unanswered, not an error",
+   scale(tf, codebook=ty_cb, score="child.1.k_score") == [2, None, None] and not any("child.1.k.b" in r for r in tf))
+fails_with("an unknown method is refused", "median", lambda: scale(tf, ["sdq.e1"], codebook=ty_cb, method="median"))
+fails_with("a variable that is no scale score says so", "no scale score", lambda: scale(tf, codebook=ty_cb, score="satisfied"))
+older = [{k: v for k, v in var.items() if k != "scale_score"} for var in ty_cb]
+fails_with("an older platform without the rule: a plain message naming the way by hand", "name the items and the method",
+           lambda: scale(tf, codebook=older, score="sdq_emo"))
+fails_with("neither items nor score: a plain message", "Name the items", lambda: scale(tf, codebook=ty_cb))
+
+try:
+    import pandas  # noqa: F401
+    tdf = con.frame(TYPES)
+    tflat = unnest(tdf)
+    ok("pandas: unnest() adds the option columns after the list, with the export's values",
+       all(same_as_export(list(tflat[f]), f) for f in option_fields) and str(tflat["devices.phone"].dtype) == "Int64")
+    ok("pandas: score= reads the codebook the frame carries",
+       same_as_export(list(scale(tflat, score="sdq_total")), "sdq_total") and same_as_export(list(scale(tflat, score="child.1.k_score")), "child.1.k_score"))
+except ImportError:
+    print("  (pandas not installed — the frame checks are skipped)")
 
 print(f"\n{checks - failures}/{checks} checks passed")
 sys.exit(1 if failures else 0)

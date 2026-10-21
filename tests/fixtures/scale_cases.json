@@ -1,5 +1,5 @@
 {
-    "about": "Made by tests/Feature/ScaleScorePackageCasesTest.php of the platform from its own cases (tests/fixtures/scale-score/cases.json, SPECS §75.6) — do not edit; UPDATE_PACKAGE_FIXTURES=1 writes it again. Per case: the API codebook of the matrix rows, one response as stored (a row a condition hides is empty), the items, min_items (null: the default, every item) and the score the platform gives (null: none).",
+    "about": "Made by tests/Feature/ScaleScorePackageCasesTest.php of the platform from its own cases (tests/fixtures/scale-score/cases.json, SPECS §75.6) — do not edit; UPDATE_PACKAGE_FIXTURES=1 writes it again. Per case: the API codebook of the matrix rows, one response as stored (a row a condition hides is empty), the items, the method (mean or sum), min_items (null: the default, every item) and the score the platform gives (null: none).",
     "cases": [
         {
             "name": "every row answered: the mean",
@@ -161,8 +161,173 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": 2.5
+        },
+        {
+            "name": "every row answered: the sum",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 1,
+                "m.r2": 2,
+                "m.r3": 3,
+                "m.r4": 4
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 10
         },
         {
             "name": "a reverse-scored row counts mirrored (1-4: 5 - answer)",
@@ -328,8 +493,177 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": 1.75
+        },
+        {
+            "name": "the same as a sum",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "Never"
+                        },
+                        {
+                            "value": "2",
+                            "text": "Rarely"
+                        },
+                        {
+                            "value": "3",
+                            "text": "Often"
+                        },
+                        {
+                            "value": "4",
+                            "text": "Always"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "Never"
+                        },
+                        {
+                            "value": "2",
+                            "text": "Rarely"
+                        },
+                        {
+                            "value": "3",
+                            "text": "Often"
+                        },
+                        {
+                            "value": "4",
+                            "text": "Always"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — Reversed",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "Never"
+                        },
+                        {
+                            "value": "2",
+                            "text": "Rarely"
+                        },
+                        {
+                            "value": "3",
+                            "text": "Often"
+                        },
+                        {
+                            "value": "4",
+                            "text": "Always"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 1,
+                        "max": 4
+                    }
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "Never"
+                        },
+                        {
+                            "value": "2",
+                            "text": "Rarely"
+                        },
+                        {
+                            "value": "3",
+                            "text": "Often"
+                        },
+                        {
+                            "value": "4",
+                            "text": "Always"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 1,
+                "m.r2": 2,
+                "m.r3": 4,
+                "m.r4": 3
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 7
         },
         {
             "name": "one row missing, every row asked for: no value",
@@ -491,6 +825,7 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": null
         },
@@ -654,6 +989,7 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": 3,
             "expected": 2.3333333333333335
         },
@@ -817,7 +1153,172 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": null,
+            "expected": null
+        },
+        {
+            "name": "nothing answered, one asked for: still no value",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": null,
+                "m.r2": null,
+                "m.r3": null,
+                "m.r4": null
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": 1,
             "expected": null
         },
         {
@@ -982,6 +1483,7 @@
                 "m.b",
                 "m.c"
             ],
+            "method": "mean",
             "min_items": 2,
             "expected": 3
         },
@@ -1147,6 +1649,7 @@
                 "m.b",
                 "m.c"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": null
         },
@@ -1312,6 +1815,7 @@
                 "m.b",
                 "m.c"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": 2.6666666666666665
         },
@@ -1425,6 +1929,7 @@
                 "m.r2",
                 "m.r3"
             ],
+            "method": "mean",
             "min_items": 2,
             "expected": 3
         },
@@ -1538,8 +2043,123 @@
                 "m.r2",
                 "m.r3"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": null
+        },
+        {
+            "name": "numbers written as text (a Qualtrics import) are numbers",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": "1",
+                "m.r2": "3",
+                "m.r3": "2"
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 6
         },
         {
             "name": "decimal scale 0-1: the reversed 0.5 stays 0.5",
@@ -1621,6 +2241,7 @@
                 "m.r1",
                 "m.r2"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": 0.75
         },
@@ -1696,6 +2317,7 @@
                 "m.r1",
                 "m.r2"
             ],
+            "method": "mean",
             "min_items": 1,
             "expected": null
         },
@@ -1771,6 +2393,7 @@
                 "m.r1",
                 "m.r2"
             ],
+            "method": "mean",
             "min_items": 1,
             "expected": 1
         },
@@ -1846,8 +2469,173 @@
                 "m.r1",
                 "m.r2"
             ],
+            "method": "mean",
             "min_items": 1,
             "expected": null
+        },
+        {
+            "name": "the sum of fewer rows when fewer are asked for",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 4,
+                "m.r2": null,
+                "m.r3": 4,
+                "m.r4": null
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": 2,
+            "expected": 8
         },
         {
             "name": "a minimum above the number of rows means every row",
@@ -2009,8 +2797,173 @@
                 "m.r3",
                 "m.r4"
             ],
+            "method": "mean",
             "min_items": 9,
             "expected": 1
+        },
+        {
+            "name": "an answer to a row the matrix does not have is left out",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 1,
+                "m.r2": 1,
+                "m.r3": 1,
+                "m.r4": 1
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 4
         },
         {
             "name": "a row shown by its condition counts (reversed: 5 - 4)",
@@ -2138,6 +3091,7 @@
                 "m.r2",
                 "m.r3"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": 1.3333333333333333
         },
@@ -2267,6 +3221,7 @@
                 "m.r2",
                 "m.r3"
             ],
+            "method": "mean",
             "min_items": null,
             "expected": null
         },
@@ -2396,8 +3351,2365 @@
                 "m.r2",
                 "m.r3"
             ],
+            "method": "mean",
             "min_items": 2,
             "expected": 1.5
+        },
+        {
+            "name": "the matrix's rowsVisibleIf hides r2 and r3; r4 is shown by its own condition, which replaces the matrix's",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 1,
+                "m.r2": null,
+                "m.r3": null,
+                "m.r4": 2
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": 2,
+            "expected": 3
+        },
+        {
+            "name": "r4 is hidden by its own condition, though the matrix's would show it",
+            "codebook": [
+                {
+                    "name": "m.r1",
+                    "label": "m — r1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r2",
+                    "label": "m — r2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r3",
+                    "label": "m — r3",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                },
+                {
+                    "name": "m.r4",
+                    "label": "m — r4",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        },
+                        {
+                            "value": "3",
+                            "text": "3"
+                        },
+                        {
+                            "value": "4",
+                            "text": "4"
+                        },
+                        {
+                            "value": "5",
+                            "text": "5"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 2,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.r1": 1,
+                "m.r2": 5,
+                "m.r3": 3,
+                "m.r4": null
+            },
+            "items": [
+                "m.r1",
+                "m.r2",
+                "m.r3",
+                "m.r4"
+            ],
+            "method": "sum",
+            "min_items": 3,
+            "expected": 9
+        },
+        {
+            "name": "a subscale: only its rows",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 3
+        },
+        {
+            "name": "a subscale with a reverse-scored row",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.c1",
+                "m.c2"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 3
+        },
+        {
+            "name": "several subscales: their rows together",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2",
+                "m.c1",
+                "m.c2"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 6
+        },
+        {
+            "name": "several subscales, written with spaces",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2",
+                "m.c1",
+                "m.c2"
+            ],
+            "method": "mean",
+            "min_items": null,
+            "expected": 1.5
+        },
+        {
+            "name": "a subscale's minimum counts among its rows",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": null,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2"
+            ],
+            "method": "mean",
+            "min_items": 1,
+            "expected": 1
+        },
+        {
+            "name": "a subscale without a minimum needs every one of its rows",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": null,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2"
+            ],
+            "method": "mean",
+            "min_items": null,
+            "expected": null
+        },
+        {
+            "name": "another subscale's missing row does not matter",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": null,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2",
+                "m.c1",
+                "m.c2"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 6
+        },
+        {
+            "name": "a subscale no row has: no value",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [],
+            "method": "sum",
+            "min_items": null,
+            "expected": null
+        },
+        {
+            "name": "without subscales every row counts, those without a subscale too",
+            "codebook": [
+                {
+                    "name": "m.e1",
+                    "label": "m — e1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.e2",
+                    "label": "m — e2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "emo"
+                },
+                {
+                    "name": "m.c1",
+                    "label": "m — c1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "reverse_scored": {
+                        "min": 0,
+                        "max": 2
+                    },
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.c2",
+                    "label": "m — c2",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "con"
+                },
+                {
+                    "name": "m.p1",
+                    "label": "m — p1",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false,
+                    "subscale": "pro"
+                },
+                {
+                    "name": "m.x",
+                    "label": "m — x",
+                    "type": "categorical",
+                    "surveyjs_type": "matrix",
+                    "value_labels": [
+                        {
+                            "value": "0",
+                            "text": "0"
+                        },
+                        {
+                            "value": "1",
+                            "text": "1"
+                        },
+                        {
+                            "value": "2",
+                            "text": "2"
+                        }
+                    ],
+                    "parent": "m",
+                    "position": 1,
+                    "page": "p",
+                    "page_visible_if": null,
+                    "panel_visible_if": null,
+                    "hidden": false,
+                    "is_required": false,
+                    "visible_if": null,
+                    "enable_if": null,
+                    "required_if": null,
+                    "validators": [],
+                    "hashed": false
+                }
+            ],
+            "data": {
+                "m.e1": 1,
+                "m.e2": 2,
+                "m.c1": 0,
+                "m.c2": 1,
+                "m.p1": 2,
+                "m.x": 2
+            },
+            "items": [
+                "m.e1",
+                "m.e2",
+                "m.c1",
+                "m.c2",
+                "m.p1",
+                "m.x"
+            ],
+            "method": "sum",
+            "min_items": null,
+            "expected": 10
         }
     ]
 }

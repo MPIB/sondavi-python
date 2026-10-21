@@ -20,7 +20,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.8.0"
+_USER_AGENT = "sondavi-python/0.9.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -68,7 +68,7 @@ class Connection:
     # ── plumbing ─────────────────────────────────────────────────────────────
 
     def _request(self, method: str, path: str, query: dict | None = None,
-                 body: dict | None = None, max_tries: int = 4) -> Any:
+                 body: dict | None = None, max_tries: int = 4, raw: bool = False) -> Any:
         url = f"{self.base_url}/api/v1/{path}"
         if query:
             url += "?" + urllib.parse.urlencode({k: v for k, v in query.items() if v is not None})
@@ -86,7 +86,8 @@ class Connection:
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             try:
                 with urllib.request.urlopen(req) as resp:
-                    return json.loads(resp.read().decode())
+                    content = resp.read()
+                    return content if raw else json.loads(content.decode())
             except urllib.error.HTTPError as err:
                 payload = err.read().decode(errors="replace")
                 try:
@@ -170,6 +171,60 @@ class Connection:
             cursor = body["meta"].get("next_cursor")
             if cursor is None or not body["data"]:
                 return
+
+    def files(self, survey_id: int, folder: str | None = None,
+              include_test: bool = False) -> list[dict]:
+        """The files participants uploaded, downloaded and unpacked — one row per file.
+
+        The platform keeps an uploaded file as a file; the responses only name it
+        (`{"name", "type", "size", "content": "sondavi-file:<id>"}`). This fetches all of a
+        study's files as one ZIP and unpacks it into `folder` (default:
+        `sondavi-files-<survey_id>` in the working directory): a folder per question, named
+        like its column (`drawing`, in a loop `child.0.drawing`), the files named by
+        response — `<response_id>-<n>.<extension>`, never by the name the participant gave
+        them. So the files of one task can be rated together without seeing whose they are.
+
+        Each row: `response_id`, `respondent_id` and the panel columns (only when the token
+        may read identifiers and the study shows them), `question`, `question_text`,
+        `file_number`, `original_name`, `type`, `size` (bytes), `saved_at`, `test`, `path`
+        (inside the ZIP), `sha256`, and `local_path` — where the file now is on this
+        computer. Join it to `responses()` over `response_id`.
+
+        `include_test=True` gives the files of the test responses instead.
+        """
+        import csv
+        import io
+        import zipfile
+
+        query = {"include_test": 1} if include_test else None
+        try:
+            content = self._request("GET", f"surveys/{survey_id}/files", query, raw=True)
+        except ApiError as err:
+            if err.status != 404:
+                raise
+            # The route is new: an older platform knows the study but not this question about it.
+            raise ApiError(404, f"{err}" + " If the study is in your token's scope, the platform may be older than "
+                           "version 0.106, the first to keep uploaded files as files.") from None
+        target = os.path.abspath(folder or f"sondavi-files-{survey_id}")
+        os.makedirs(target, exist_ok=True)
+
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            for name in archive.namelist():
+                # Nothing is written outside the folder, whatever a name in the ZIP says.
+                destination = os.path.abspath(os.path.join(target, name))
+                if os.path.commonpath([target, destination]) != target:
+                    raise ApiError(200, f"The ZIP holds a path outside its folder: {name}")
+            archive.extractall(target)
+            listing = archive.read("files.csv").decode("utf-8-sig")
+
+        rows = []
+        for row in csv.DictReader(io.StringIO(listing)):
+            for key in ("response_id", "file_number", "size"):
+                if row.get(key, "") != "":
+                    row[key] = int(row[key])
+            row["local_path"] = os.path.join(target, row["path"])
+            rows.append(row)
+        return rows
 
     def fingerprint(self) -> str:
         """The line that belongs next to a published result.
@@ -335,7 +390,7 @@ def _with_status_categories(df):
     return df
 
 
-def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None = None):
+def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None = None, options: bool = True):
     """Spread nested answers into one field each.
 
     Matrices and dynamic panels arrive nested, because flattening them on arrival would
@@ -345,7 +400,9 @@ def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None =
 
     A matrix cell becomes `question.row.column`, an entry of a dynamic panel
     `question.0.field` — counting from zero, as the export does. A multiple-choice answer
-    is a list of values and stays one field: there the list IS the answer.
+    is a list of values and stays one field: there the list IS the answer. Right after it
+    come one field per option, as in the export files (see `options()`); `options=False`
+    leaves them out.
 
     An image marking answer becomes one field per marking type, as in the export:
     painted cells as row runs ("12:31-40 13:30" = row 12, columns 31 to 40, and row 13,
@@ -366,10 +423,11 @@ def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None =
     """
     pd = sys.modules.get("pandas")
     if pd is not None and isinstance(rows, pd.DataFrame):
-        return _unnest_frame(rows, columns, codebook)
+        return _unnest_frame(rows, columns, codebook, options)
 
     copies = _reversed_copies(codebook or [])
     out = []
+    lists: dict[str, None] = {}
 
     for row in rows:
         flat: dict = {}
@@ -379,14 +437,18 @@ def unnest(rows, columns: list[str] | None = None, codebook: list[dict] | None =
                 continue
             for name, leaf in _flatten_answer(value, key).items():
                 flat[name] = leaf
+                if _is_option_list(leaf):
+                    lists[name] = None
                 if name in copies and copies[name]["name"] not in row:
                     flat[copies[name]["name"]] = _reversed(leaf, copies[name]["sum"])
         out.append(flat)
 
+    if options and lists:
+        out = _spread_options(out, names=list(lists), codebook=codebook)
     return out
 
 
-def _unnest_frame(df, columns: list[str] | None, codebook: list[dict] | None):
+def _unnest_frame(df, columns: list[str] | None, codebook: list[dict] | None, options: bool = True):
     import pandas as pd
 
     codebook = df.attrs.get("sondavi_codebook") if codebook is None else codebook
@@ -416,6 +478,10 @@ def _unnest_frame(df, columns: list[str] | None, codebook: list[dict] | None):
 
     out = pd.concat(parts, axis=1)
     out.attrs = dict(df.attrs)
+    if options:
+        lists = [c for c in out.columns if out[c].dtype == object and _holds_options(list(out[c]))]
+        if lists:
+            out = _spread_options(out, names=lists, codebook=codebook)
     return out
 
 
@@ -445,6 +511,108 @@ def _flatten_answer(value: Any, prefix: str) -> dict:
         flat.update(_flatten_answer(child, f"{prefix}.{key}"))
 
     return flat or {prefix: value}
+
+
+def _is_option_list(value: Any) -> bool:
+    """The options chosen, in order: a non-empty list of single values."""
+    return isinstance(value, list) and bool(value) and all(not isinstance(v, (dict, list)) for v in value)
+
+
+def _holds_options(cells: list) -> bool:
+    """A field whose answers are lists of options (or empty) — what `options()` spreads."""
+    return any(_is_option_list(c) for c in cells) and all(
+        _is_option_list(c) or c is None or c == [] or (not isinstance(c, (dict, list)) and _is_missing(c)) for c in cells)
+
+
+def options(data, names: list[str] | None = None, codebook: list[dict] | None = None):
+    """One field per option of a question with several answers.
+
+    A multiple-choice answer arrives as the list of options chosen — `["phone", "other"]` —
+    because that is how the platform stores it. For a table or a model you usually want a
+    field per option, as the platform's export files have them: `devices.phone` is 1 when the
+    option was chosen, 0 when the question was answered without it and None when the question
+    was not answered. For a ranking the field holds the option's place, 1 being the first.
+
+    The options and their order come from the codebook — SurveyJS' own "None", "Other" and
+    "Don't know" included —; an answer the codebook does not list (an option deleted later)
+    gets a field of its own after them. Without a codebook the options are the answers that
+    occur, in the order they first occur. The new fields stand right after the question's own,
+    which stays as it is.
+
+    `data` is what `responses()` returns or a DataFrame from `frame()` (which carries its
+    codebook); `names` picks the questions — by default every field whose answers are lists.
+    """
+    pd = sys.modules.get("pandas")
+    frame = pd is not None and isinstance(data, pd.DataFrame)
+    if codebook is None and frame:
+        codebook = data.attrs.get("sondavi_codebook")
+    variables = {v.get("name"): v for v in (codebook or [])}
+    if frame:
+        fields = list(data.columns)
+        cells = {f: list(data[f]) for f in fields}
+    else:
+        fields = list(dict.fromkeys(k for row in data for k in row))
+        cells = {f: [row.get(f) for row in data] for f in fields}
+    if names is None:
+        names = [f for f in fields if _holds_options(cells[f])]
+    for name in names:
+        if name not in cells:
+            raise KeyError(f"Not a field of the data: {name!r}")
+        if not _holds_options(cells[name]):
+            raise ValueError(f"{name!r} holds no list of options.")
+
+    added: dict[str, dict[str, list]] = {}
+    for name in names:
+        variable = variables.get(name, {})
+        known = [_value_key(label.get("value")) for label in variable.get("value_labels") or []]
+        seen = [_value_key(v) for c in cells[name] if _is_option_list(c) for v in c]
+        choices = known + [o for o in dict.fromkeys(seen) if o is not None and o not in known]
+        ranking = variable.get("surveyjs_type") == "ranking"
+        columns: dict[str, list] = {}
+        for choice in choices:
+            column = []
+            for cell in cells[name]:
+                if not _is_option_list(cell):
+                    column.append(None)
+                    continue
+                keys = [_value_key(v) for v in cell]
+                if ranking:
+                    column.append(keys.index(choice) + 1 if choice in keys else None)
+                else:
+                    column.append(1 if choice in keys else 0)
+            columns[f"{name}.{choice}"] = column
+        added[name] = columns
+
+    new_fields = {f for columns in added.values() for f in columns}
+    if frame:
+        out = data.drop(columns=[c for c in data.columns if c in new_fields])
+        for name, columns in added.items():
+            at = list(out.columns).index(name) + 1
+            for offset, (field, column) in enumerate(columns.items()):
+                out.insert(at + offset, field, pd.array(column, dtype="Int64"))
+        out.attrs = dict(data.attrs)
+        return out
+
+    out = []
+    for i, row in enumerate(data):
+        new_row: dict = {}
+        for key, value in row.items():
+            if key in new_fields:
+                continue
+            new_row[key] = value
+            for field, column in added.get(key, {}).items():
+                new_row[field] = column[i]
+        # A question this row did not answer at all has no key; its option fields are empty.
+        for name, columns in added.items():
+            if name not in row:
+                for field, column in columns.items():
+                    new_row[field] = column[i]
+        out.append(new_row)
+    return out
+
+
+# unnest() has a parameter of the same name.
+_spread_options = options
 
 
 # ── Applying the codebook ────────────────────────────────────────────────────────────────
@@ -692,16 +860,45 @@ def items(data, names: list[str], codebook: list[dict] | None = None, reverse: b
     return [dict(zip(columns, values)) for values in zip(*columns.values())]
 
 
-def scale(data, names: list[str], codebook: list[dict] | None = None, min_items: int | None = None):
-    """The scale score per row: the mean of `items()`.
+def scale(data, names: list[str] | None = None, codebook: list[dict] | None = None, min_items: int | None = None,
+          method: str = "mean", score: str | None = None):
+    """The scale score per row: the mean of `items()`, or their sum with `method="sum"`.
 
     None (NaN in a frame) for a row with fewer than `min_items` numbers — by default every
-    item has to be answered, so a mean over fewer items never happens unnoticed. Lower it to
+    item has to be answered, so a score over fewer items never happens unnoticed. Lower it to
     allow gaps, e.g. `min_items=3` for three of four; more than there are items means every
     item. The rule is the platform's own (its scale score in the questionnaire gives the same
     numbers): an item a condition hid from the participant is empty in the data and counts
     as unanswered.
+
+    `score="sdq_emo"` works out a scale score the questionnaire computes itself (Σ in the
+    editor): the codebook says which rows it counts — those of its subscales, in a loop those
+    of the same copy —, mean or sum, and how many have to be answered (`min_items` lowers that
+    on purpose). That is the way to give responses recorded before a score was added or changed
+    the score of now; the platform keeps every response's score as it was computed then. It
+    needs a platform that describes its scale scores in the codebook (version 0.106 or later).
     """
+    pd = sys.modules.get("pandas")
+    frame = pd is not None and isinstance(data, pd.DataFrame)
+    if codebook is None and frame:
+        codebook = data.attrs.get("sondavi_codebook")
+    if score is not None:
+        rule = _scale_rule(score, codebook)
+        names, method = list(rule["items"]), rule["method"]
+        if min_items is None:
+            min_items = rule["min_items"]
+        # A row of the score that no response answered has no column of its own: unanswered, not unknown.
+        absent = [n for n in names if (n not in data.columns if frame else not any(n in row for row in data))]
+        if frame and absent:
+            data = data.assign(**{n: [None] * len(data) for n in absent})
+    if method not in ("mean", "sum"):
+        raise ValueError(f"method has to be 'mean' or 'sum', not {method!r}.")
+    if names is None:
+        raise ValueError("Name the items, or a scale score of the questionnaire with score=.")
+    if not names:
+        # No item at all (a subscale no row has): no score, as in the questionnaire.
+        empty = [None] * len(data)
+        return pd.Series(empty, index=data.index, dtype=float) if frame else empty
     need = len(names) if min_items is None else min_items
     if need < 1:
         raise ValueError("min_items has to be at least 1.")
@@ -709,14 +906,32 @@ def scale(data, names: list[str], codebook: list[dict] | None = None, min_items:
     need = min(need, len(names))
     table = items(data, names, codebook=codebook)
 
-    def score(values):
+    def worked_out(values):
         numbers_ = [v for v in values if not _is_missing(v)]
-        return sum(numbers_) / len(numbers_) if len(numbers_) >= need else None
+        if len(numbers_) < need:
+            return None
+        # 4.0 → 4, as the platform writes it.
+        return _whole(sum(numbers_) if method == "sum" else sum(numbers_) / len(numbers_))
 
-    pd = sys.modules.get("pandas")
     if pd is not None and isinstance(table, pd.DataFrame):
-        return pd.Series([score(list(r)) for r in table.itertuples(index=False)], index=table.index, dtype=float)
-    return [score(list(row.values())) for row in table]
+        return pd.Series([worked_out(list(r)) for r in table.itertuples(index=False)], index=table.index, dtype=float)
+    return [worked_out(list(row.values())) for row in table]
+
+
+def _scale_rule(score: str, codebook: list[dict] | None) -> dict:
+    """How a scale score of the questionnaire is worked out, from the codebook (platform SPECS §66.4)."""
+    if codebook is None:
+        raise ValueError("No codebook to read the scale score from: pass codebook=con.codebook(42).")
+    variable = next((v for v in codebook if v.get("name") == score), None)
+    if variable is None:
+        raise KeyError(f"Not a variable of the codebook: {score!r}")
+    rule = variable.get("scale_score")
+    if not rule:
+        raise ValueError(f"{score!r} is no scale score the codebook describes. Platforms before version 0.106 do "
+                         "not describe their scale scores; name the items and the method then.")
+    if rule.get("method") not in ("mean", "sum"):
+        raise ValueError(f"{score!r} is worked out as {rule.get('method')!r}, which this version does not know.")
+    return {"items": rule.get("items") or [], "method": rule["method"], "min_items": rule.get("min_items")}
 
 
 def _item_number(value: Any, variable: dict | None) -> float | int | None:

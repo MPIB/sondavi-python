@@ -18,6 +18,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
 TOKEN = 'sdv_' + 'T' * 48
+# A token without the ability to read identifiers: the files ZIP it gets has no respondent_id (SPECS §87.3).
+TOKEN_PLAIN = 'sdv_' + 'P' * 48
 state = {'flaky_left': 2}
 
 
@@ -39,6 +41,7 @@ STUDY_FILES = {
     SURVEYS[1]: ('codebook_wave2.json', 'responses_wave2.json'),
     SURVEYS[2]: ('codebook_interview.json', 'responses_interview.json'),
     SURVEYS[3]: ('codebook_screening.json', 'responses_screening.json'),
+    SURVEYS[4]: ('codebook_types.json', 'responses_types.json'),
 }
 
 # Two further snapshot ids, each standing for a state the same recorded set can be in.
@@ -68,7 +71,16 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _auth_ok(self):
-        return self.headers.get('Authorization') == f'Bearer {TOKEN}'
+        return self.headers.get('Authorization') in (f'Bearer {TOKEN}', f'Bearer {TOKEN_PLAIN}')
+
+    def send_file(self, name):
+        with open(os.path.join(HERE, name), 'rb') as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/zip')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _split(self):
         path, _, qs = self.path.partition('?')
@@ -108,6 +120,11 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r'^/api/v1/snapshots/([0-9a-f-]+)$', path)
         if m:
             return self.send_json(load('snapshot.json'))
+
+        # The uploaded files (SPECS §87.3), recorded for the first study.
+        if path == f'/api/v1/surveys/{SURVEY_ID}/files':
+            plain = self.headers.get('Authorization') == f'Bearer {TOKEN_PLAIN}'
+            return self.send_file('files_plain.zip' if plain else 'files.zip')
 
         m = re.match(r'^/api/v1/surveys/([0-9]+)/codebook$', path)
         if m and m.group(1) in STUDY_FILES:
