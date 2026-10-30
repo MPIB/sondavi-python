@@ -24,4 +24,4 @@ from .simulations import Simulation  # attaches components(), simulate(), … to
 
 __all__ = ["connect", "Connection", "ApiError", "BudgetExhausted", "Snapshot", "Simulation", "unnest", "options", "markings",
            "conversations", "items", "scale", "verify", "Verification"]
-__version__ = "0.10.0"
+__version__ = "0.11.0"

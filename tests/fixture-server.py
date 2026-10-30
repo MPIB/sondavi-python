@@ -208,6 +208,11 @@ class Handler(BaseHTTPRequestHandler):
                 page = {'data': page['data'][:1],
                         'meta': dict(page['meta'], count=1, remaining=0, next_cursor=None)}
                 page['data'][0] = dict(page['data'][0], response_id=999, respondent_id='PNL-3')
+                # PNL-3 is a person of the panel too (meta.panel_columns): their own code, not PNL-1's.
+                for column, value in (('panel_patient_code', 'K-103'), ('panel_first_name', 'TEST Person 3'),
+                                      ('panel_email', 'test.fixture3@example.org')):
+                    if column in page['data'][0]:
+                        page['data'][0][column] = value
                 # The recorded PNL-3 skipped the image marking questions; a copy of PNL-1's
                 # markings would count someone else's cells twice.
                 for skipped in ('map', 'visits'):

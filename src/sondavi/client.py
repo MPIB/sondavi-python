@@ -20,7 +20,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "BudgetExhausted", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.10.0"
+_USER_AGENT = "sondavi-python/0.11.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -183,6 +183,9 @@ class Connection:
             if seen == 0:
                 self.last_fingerprint = body["meta"].get("fingerprint")
                 self.last_timezone = body["meta"].get("timezone") or "UTC"
+                # The columns of the people's panel (`panel`, `panel_<column>`): they describe the
+                # person, not one response — `waves()` keeps them once.
+                self.last_panel_columns = list(body["meta"].get("panel_columns") or [])
 
             for row in body["data"]:
                 if seen >= max_rows:
@@ -268,7 +271,9 @@ class Connection:
         """Join the waves of a study series into one row per person.
 
         Each wave's fields are suffixed with its name, so `mood` becomes `mood_wave1`
-        and `mood_wave2` instead of colliding.
+        and `mood_wave2` instead of colliding. The columns of the person's panel — `panel`
+        (its name, with a panel per cohort the cohort) and your own, such as `panel_patient_code` —
+        describe the person, not a wave: they appear once, unsuffixed, from the first wave that has them.
 
         **Everyone is kept, including those who did not take part in every wave** —
         their later fields are simply absent. That is a full outer join rather than an
@@ -289,6 +294,7 @@ class Connection:
         joined: dict[Any, dict] = {}
         for survey_id, label in zip(survey_ids, labels):
             rows = self.responses(survey_id, **kwargs)
+            person = set(getattr(self, "last_panel_columns", []) or [])
 
             if rows and by not in rows[0]:
                 raise ApiError(200, (
@@ -301,8 +307,13 @@ class Connection:
             for row in rows:
                 target = joined.setdefault(row[by], {by: row[by]})
                 for key, value in row.items():
-                    if key != by:
-                        target[f"{key}_{label}"] = value
+                    if key == by:
+                        continue
+                    if key in person:
+                        if target.get(key) is None:
+                            target[key] = value
+                        continue
+                    target[f"{key}_{label}"] = value
 
         return list(joined.values())
 

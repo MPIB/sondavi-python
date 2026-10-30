@@ -1,3 +1,20 @@
+# sondavi 0.11.0
+
+## The panel's columns
+
+Needs platform 0.114 or later.
+
+* `responses()` brings the columns of the participants' panel, as the platform's data files do:
+  `panel` (the panel's name, with one panel per cohort the cohort) and your own columns as
+  `panel_<column>`, for example `panel_patient_code` (first name, last name and e-mail address only
+  for an identified study). They come with the respondent identifier; `con.last_panel_columns`
+  names them.
+* `waves()` keeps them once per person instead of one copy per wave (`panel_patient_code`, not
+  `panel_patient_code_wave1`, `panel_patient_code_wave2`). A value one wave gives, such as the
+  name from an identified wave, is not lost to another wave that does not have it.
+* A text question for a number (input type Number or Range) is numeric in the codebook now, also
+  as a matrix cell or a field of Multiple Textboxes, so it arrives as a number.
+
 # sondavi 0.10.0
 
 ## Fixed

@@ -382,6 +382,29 @@ ok("the join key is not suffixed", all("respondent_id" in w for w in waves))
 dropped = [w for w in waves if "mood_w2" not in w]
 ok("someone who skipped the second wave is kept", len(dropped) == 1)
 ok("and is recognisable by their missing wave", dropped[0]["respondent_id"] == "PNL-3")
+# The panel's columns describe the person, not a wave (meta.panel_columns, Jakob 30.10.2026): once, unsuffixed.
+ok("the responses name the panel's columns",
+   con.last_panel_columns == ["panel", "panel_patient_code", "panel_first_name", "panel_email"])
+ok("the panel and the patient code are one field each, unsuffixed",
+   all("panel_patient_code" in w and not any(k.startswith("panel_patient_code_") for k in w) for w in waves))
+ok("everyone has their code, the one who dropped out too",
+   sorted(w["panel_patient_code"] for w in waves) == ["K-101", "K-102", "K-103"])
+# An identified wave brings the name, a pseudonymized one leaves it empty: the name a wave gave is kept.
+_rows = {1: ([{"respondent_id": "PNL-1", "panel_first_name": "Eva", "mood": "1"}], ["panel_first_name"]),
+         2: ([{"respondent_id": "PNL-1", "panel_first_name": None, "panel_patient_code": "K-101", "mood": "2"}],
+             ["panel_first_name", "panel_patient_code"])}
+_real = con.responses
+def _fake(survey_id, **kw):
+    rows, columns = _rows[survey_id]
+    con.last_panel_columns = columns
+    return rows
+con.responses = _fake
+try:
+    joined = con.waves([1, 2])
+finally:
+    con.responses = _real
+ok("a value one wave gave is not lost to another's gap",
+   joined == [{"respondent_id": "PNL-1", "panel_first_name": "Eva", "mood_wave1": "1", "panel_patient_code": "K-101", "mood_wave2": "2"}])
 fails_with("one study is not a series", "at least two",
            lambda: con.waves([surveys[0]["id"]]))
 
