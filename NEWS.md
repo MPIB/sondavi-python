@@ -1,3 +1,34 @@
+# sondavi 0.10.0
+
+## Fixed
+
+* `snapshot()` without `since` failed with "The since field must be a valid date" (422): it sent
+  an empty `since`, which the platform refused. It now leaves it out; platforms from 0.110.1 on
+  also accept an empty one, so 0.9.0 works there too.
+
+## Simulations
+
+Play a study's AI interviews from a script (platform 0.107, needs a token with the
+permission "Run simulations").
+
+* `components()` lists what can be simulated, each with its parameters — `default` is the
+  value the study has now.
+* `start_simulation()` begins one with your own parameters and inputs; `Simulation.respond()`
+  answers the current stimulus with text, a value or a summary choice. A model call that
+  fails records nothing on the platform, so the same response is sent again.
+* A question the interview answers with buttons (`stimulus["expects"] == "choice"`) takes
+  one of the values it offers, as in the interview: `respond(value=..., other=..., comment=...)`,
+  or `respond(skip=True)` where `question["can_skip"]`. Text is not taken there. The
+  stimulus lists what the buttons offer (`choices`, `special_items`, `rate_values`, …).
+* `simulate()` plays a whole simulation with a function of yours as the respondent.
+* `Simulation.attach()` keeps your own data with it; `simulations()` lists them again,
+  by run, component or status.
+* A used-up daily budget raises `BudgetExhausted` at once, with `retry_after`, instead of
+  waiting until midnight. `ApiError` now carries the platform's `reason`.
+* `examples/`: prompt optimisation with GEPA, and a plain evolutionary search.
+
+Same as the R package 0.10.0.
+
 # sondavi 0.9.0
 
 ## Scale scores of the questionnaire, worked out again

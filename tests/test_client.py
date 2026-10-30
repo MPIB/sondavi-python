@@ -117,7 +117,13 @@ con._request("GET", "surveys", {"flaky": 1})
 ok("a 429 is waited out rather than hammered", time.monotonic() - start >= 1)
 
 print("\nCitable datasets")
+sent = []
+_plain_request = con._request
+con._request = lambda method, path, **kw: (sent.append(kw.get("body")), _plain_request(method, path, **kw))[1]
 snap = con.snapshot(SURVEY, label="Paper, figure 2")
+con._request = _plain_request
+# The platform refused `"since": null` with 422 until 10/2026 — every snapshot without a date failed (found live).
+ok("a snapshot without a date sends no since", sent and "since" not in sent[0] and sent[0]["label"] == "Paper, figure 2")
 ok("a snapshot is cited by a uuid", len(snap.id) == 36)
 ok("it records the size of the set", snap.recorded_rows == 3)
 ok("and is complete when nothing changed", snap.complete)
@@ -378,6 +384,68 @@ ok("someone who skipped the second wave is kept", len(dropped) == 1)
 ok("and is recognisable by their missing wave", dropped[0]["respondent_id"] == "PNL-3")
 fails_with("one study is not a series", "at least two",
            lambda: con.waves([surveys[0]["id"]]))
+
+print("\nSimulations")
+import json as _json  # noqa: E402
+from sondavi import BudgetExhausted  # noqa: E402
+
+_fixture = lambda name: _json.loads((Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))  # noqa: E731
+SIM_SURVEY = _fixture("simulation_start.json")["data"]["survey_id"]
+
+comps = con.components(SIM_SURVEY)
+ok("the components arrive", [c["id"] for c in comps] == ["survey-interview", "question:day"])
+day = [c for c in comps if c["id"] == "question:day"][0]
+params = {p["name"]: p for p in day["parameters"]}
+ok("with their parameters and the study's values", params["systemPrompt"]["default"] == "Be brief.")
+ok("and what they take", params["maxTurns"]["type"] == "integer" and params["maxTurns"]["max"] == 100)
+
+sim = con.start_simulation(SIM_SURVEY, "question:day", parameters={"systemPrompt": "Ask like a journalist.", "temperature": 0.3},
+                           inputs={"locale": "en", "context": {"mood": "3"}}, label="journalist", run="fixture")
+ok("a started simulation waits for text", sim.active and sim.expects == "text")
+ok("after the interviewer's opening", sim.stimulus["messages"] and "turn 1" in sim.stimulus["messages"][0])
+ok("it ran with the parameters asked for", sim.effective_parameters["systemPrompt"] == "Ask like a journalist.")
+ok("and keeps the study's value for the rest", sim.effective_parameters["maxTurns"] == 2)
+
+# A failed model call records nothing; the package sends the same response again.
+sim.respond("FAIL ONCE")
+ok("a failed model call is sent again, not given up", sim.stimulus["turn"] == 2)
+sim.respond("The run, mostly.")
+ok("the summaries are a stimulus of their own", sim.expects == "summary" and len(sim.stimulus["options"]) == 2)
+sim.respond(choice=1)
+ok("choosing one ends the simulation", sim.status == "completed" and sim.expects is None)
+ok("the conversation is there", [t["role"] for t in sim.transcript][:2] == ["interviewer", "respondent"])
+ok("and what a participation would have produced", sim.outcome["microNarrative"]["chosenIndex"] == 1)
+fails_with("one response at a time — text or value or choice", "exactly one",
+           lambda: sim.respond("x", choice=1))
+fails_with("leaving a question out is a response of its own", "exactly one",
+           lambda: sim.respond("x", skip=True))
+fails_with("the text of Other goes with a value", "go with a value",
+           lambda: sim.respond("x", other="monthly"))
+
+sim.attach(score=0.75, feedback="Asked one question at a time.", persona={"job": "teacher"})
+ok("attached data comes back", sim.attachments["score"] == 0.75 and sim.attachments["persona"]["job"] == "teacher")
+
+listed = con.simulations(run="fixture")
+ok("simulations are listed newest first", [s.component for s in listed][:1] == ["survey-interview"])
+ok("with what was attached", any(s.attachments.get("score") == 0.75 for s in listed))
+
+# The whole loop, with a responder that answers text and picks the first summary.
+played = con.simulate(SIM_SURVEY, "question:day",
+                      responder=lambda st: 0 if st["expects"] == "summary" else "I taught all morning.")
+ok("simulate() plays a simulation to its end", played.status == "completed")
+
+whole = con.start_simulation(SIM_SURVEY, "survey-interview")
+ok("a question with options expects a choice", whole.expects == "choice"
+   and [c["text"] for c in whole.stimulus["question"]["choices"]] == ["Bad", "Neutral", "Good"])
+
+try:
+    con.start_simulation(SIM_SURVEY, "question:exhausted")
+    ok("a used-up budget stops with its own error", False)
+except BudgetExhausted as err:
+    ok("a used-up budget stops with its own error, at once", err.retry_after == 3600 and err.reason == "budget_exhausted")
+
+played.delete()
+ok("a simulation can be deleted", played.status == "deleted")
 
 print("\nPandas")
 try:

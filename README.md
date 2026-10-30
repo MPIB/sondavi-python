@@ -178,6 +178,54 @@ did not take the follow-up is simply missing those fields. Attrition is usually 
 longitudinal design is about, so an inner join would drop exactly the cases you want to
 describe.
 
+## Simulations: play a study's AI interviews
+
+With a token that has the permission **Run simulations**, a script can play the AI
+interviews of a study — an interview question, or the interview over the whole survey —
+and the platform answers with exactly the interviewer that runs live. Each simulation runs
+with a parameter set: the study's own settings, changed where you say. You can attach
+your own data to it (a score, the persona, notes), and in the platform the settings of a
+good simulation can be taken into the study with one click.
+
+```python
+[c["id"] for c in con.components(42)]
+#> ['survey-interview', 'question:q7']
+
+sim = con.start_simulation(42, "question:q7",
+                           parameters={"systemPrompt": "Ask like a journalist."},
+                           run="trial-1")
+sim.stimulus
+#> {'turn': 1, 'messages': ['Hello! What did your day look like?'], 'expects': 'text', …}
+sim.respond("I taught all morning.")
+…
+sim.attach(score=0.8, feedback="One question at a time.")
+
+# Or the whole loop, with a function that plays the respondent:
+sim = con.simulate(42, "question:q7", responder=lambda s: "I taught all morning.")
+sim.transcript, sim.outcome
+```
+
+`stimulus["expects"]` says what comes next: `"text"`, `"choice"` (a question answered with
+buttons, which takes nothing typed: `respond(value=…)` — with `other=` for "Other", `comment=`
+where it has a comment area — or `respond(skip=True)` where `stimulus["question"]["can_skip"]`),
+`"summary"` (`respond(choice=0)`, `respond(choice=None)` to
+skip, or text to ask for new ones) — and `None` at the end. Every start and response, except
+choosing a summary, uses one of your organisation's **simulated turns** for the day; when
+they are used up, `BudgetExhausted` is raised at once rather than waiting until midnight.
+`con.simulations(run="trial-1")` lists them again.
+
+Simulations are never responses: they appear in no export, and the study is never changed
+from a script.
+
+### Optimising automatically
+
+`examples/` has two runnable optimisers built on this — one with
+[GEPA](https://github.com/gepa-ai/gepa) (reflective prompt evolution), one plain
+evolutionary search without any dependency. Both play the respondent with a persona and
+score each conversation with a judge, using a language model of **your own**
+(any OpenAI-compatible endpoint); without one they run with a built-in persona and a simple
+score, so the mechanics can be watched before spending anything.
+
 ## The token
 
 Create one under your account, then export it:

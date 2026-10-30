@@ -48,8 +48,11 @@ class Snapshot:
 
 def _snapshot(self: Connection, survey_id: int, label: str | None = None,
               since: str | None = None, include_test: bool = False) -> Snapshot:
+    # Only what was given: `"since": null` was refused by the platform with 422 until 10/2026, so a snapshot
+    # without a date failed every time (found live, 29.10.2026).
+    fields = {"label": label, "since": since}
     body = self._request("POST", f"surveys/{survey_id}/snapshots",
-                         body={"label": label, "since": since,
+                         body={**{k: v for k, v in fields.items() if v is not None},
                                "include_test": bool(include_test)})
     return Snapshot._from(body["data"])
 

@@ -18,9 +18,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone as _timezone
 from typing import Any, Iterator
 
-__all__ = ["connect", "Connection", "ApiError", "unnest", "markings"]
+__all__ = ["connect", "Connection", "ApiError", "BudgetExhausted", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.9.0"
+_USER_AGENT = "sondavi-python/0.10.0"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -35,11 +35,25 @@ RESPONSE_STATUSES = ("complete", "partial", "screened_out")
 
 
 class ApiError(RuntimeError):
-    """The platform refused, and said why."""
+    """The platform refused, and said why. `reason` is the machine-readable cause the
+    simulation endpoints give (`budget_exhausted`, `model_failed`, `busy`, …), else None."""
 
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, reason: str | None = None):
         self.status = status
+        self.reason = reason
         super().__init__(message)
+
+
+class BudgetExhausted(ApiError):
+    """Your organisation's simulated turns for today are used up.
+
+    Waiting inside the package would mean waiting until midnight, so it stops instead;
+    `retry_after` says how many seconds that is.
+    """
+
+    def __init__(self, message: str, retry_after: int | None):
+        self.retry_after = retry_after
+        super().__init__(429, message, "budget_exhausted")
 
 
 def connect(base_url: str, token: str | None = None) -> "Connection":
@@ -91,9 +105,17 @@ class Connection:
             except urllib.error.HTTPError as err:
                 payload = err.read().decode(errors="replace")
                 try:
-                    message = json.loads(payload).get("message", "")
-                except ValueError:
-                    message = ""
+                    decoded = json.loads(payload)
+                    message = decoded.get("message", "")
+                    reason = decoded.get("reason")
+                except (ValueError, AttributeError):
+                    message, reason = "", None
+
+                # The day's simulated turns are used up: waiting for Retry-After would mean
+                # waiting until midnight. Say so instead.
+                if err.code == 429 and reason == "budget_exhausted":
+                    retry = err.headers.get("Retry-After")
+                    raise BudgetExhausted(message, int(retry) if retry and retry.isdigit() else None) from None
 
                 # The platform limits per token and says how long to wait.
                 # Retrying without reading Retry-After turns a small limit into a
@@ -103,7 +125,7 @@ class Connection:
                     time.sleep(float(err.headers.get("Retry-After", 1)))
                     continue
 
-                raise ApiError(err.code, _explain(err.code, message)) from None
+                raise ApiError(err.code, _explain(err.code, message), reason) from None
 
         raise ApiError(429, "Still rate limited after several attempts.")
 

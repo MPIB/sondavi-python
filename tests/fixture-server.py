@@ -20,7 +20,7 @@ HERE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
 TOKEN = 'sdv_' + 'T' * 48
 # A token without the ability to read identifiers: the files ZIP it gets has no respondent_id (SPECS §87.3).
 TOKEN_PLAIN = 'sdv_' + 'P' * 48
-state = {'flaky_left': 2}
+state = {'flaky_left': 2, 'sim_step': 0, 'model_fail_left': 0}
 
 
 def load(name):
@@ -56,6 +56,20 @@ SNAPSHOT_FILES = {
 }
 
 
+# Simulations (SPECS §88): the recorded run of the interview question, step by step — two
+# answers, then the summaries, then the choice — and the whole-survey interview's start.
+SIM_START = load('simulation_start.json')
+INTERVIEW_ID = str(SIM_START['data']['survey_id'])
+SIM_ID = SIM_START['data']['id']
+SIM_STEPS = ['simulation_step1.json', 'simulation_summary.json', 'simulation_done.json']
+# A component name standing for "the day's turns are used up" — the recorded refusal, the
+# same way the snapshot states have ids of their own.
+EXHAUSTED = 'question:exhausted'
+# A response that fails once at the model before it goes through (`model_failed`, nothing
+# recorded), so the clients' sending-again is exercised.
+FAIL_ONCE = 'FAIL ONCE'
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -87,13 +101,58 @@ class Handler(BaseHTTPRequestHandler):
         query = dict(p.split('=', 1) for p in qs.split('&') if '=' in p)
         return path, query
 
+    def _body(self):
+        length = int(self.headers.get('Content-Length') or 0)
+        raw = self.rfile.read(length) if length else b''
+        return json.loads(raw.decode() or '{}')
+
     def do_POST(self):
         if not self._auth_ok():
             return self.send_json({'message': 'Invalid or expired token.'}, 401)
 
         path, _ = self._split()
+        body = self._body()
         if re.match(rf'^/api/v1/surveys/{SURVEY_ID}/snapshots$', path):
             return self.send_json(load('snapshot.json'), 201)
+
+        if path == f'/api/v1/surveys/{INTERVIEW_ID}/simulations':
+            state['sim_step'] = 0
+            if body.get('component') == EXHAUSTED:
+                return self.send_json(load('simulation_budget_exhausted.json'), 429, {'Retry-After': '3600'})
+            if body.get('component') == 'survey-interview':
+                return self.send_json(load('simulation_whole_start.json'), 201)
+            if body.get('component') != 'question:day':
+                return self.send_json({'message': 'The given data was invalid.', 'errors': {'component': ['No such component.']}}, 422)
+            return self.send_json(SIM_START, 201)
+
+        if path == f'/api/v1/simulations/{SIM_ID}/responses':
+            if body.get('text') == FAIL_ONCE:
+                state['model_fail_left'] += 1
+                if state['model_fail_left'] == 1:
+                    return self.send_json({'message': 'The language model did not answer. Nothing was recorded; send the same response again.', 'reason': 'model_failed'}, 502)
+            if state['sim_step'] >= len(SIM_STEPS):
+                return self.send_json({'message': 'This simulation has ended; start a new one.', 'reason': 'ended'}, 409)
+            name = SIM_STEPS[state['sim_step']]
+            state['sim_step'] += 1
+            return self.send_json(load(name))
+
+        return self.send_json({'message': 'Not found.'}, 404)
+
+    def do_PATCH(self):
+        if not self._auth_ok():
+            return self.send_json({'message': 'Invalid or expired token.'}, 401)
+        path, _ = self._split()
+        state['last_patch'] = self._body()
+        if path == f'/api/v1/simulations/{SIM_ID}':
+            return self.send_json(load('simulation_attached.json'))
+        return self.send_json({'message': 'Not found.'}, 404)
+
+    def do_DELETE(self):
+        if not self._auth_ok():
+            return self.send_json({'message': 'Invalid or expired token.'}, 401)
+        path, _ = self._split()
+        if path == f'/api/v1/simulations/{SIM_ID}':
+            return self.send_json({'deleted': True})
         return self.send_json({'message': 'Not found.'}, 404)
 
     def do_GET(self):
@@ -112,6 +171,16 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == '/api/v1/snapshots':
             return self.send_json(load('snapshots.json'))
+
+        if path == f'/api/v1/surveys/{INTERVIEW_ID}/components':
+            return self.send_json(load('components.json'))
+        if path == '/api/v1/simulations':
+            return self.send_json(load('simulations.json'))
+        if path == f'/api/v1/simulations/{SIM_ID}':
+            return self.send_json(load('simulation.json'))
+        # What the clients last attached, so a test can check what was sent.
+        if path == '/__last_patch':
+            return self.send_json(state.get('last_patch') or {})
 
         m = re.match(r'^/api/v1/snapshots/([0-9a-f-]+)/responses$', path)
         if m:

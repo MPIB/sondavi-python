@@ -17,10 +17,11 @@ without a connection or a token:
     print(verify("study.csv", "study.certificate.json"))
 """
 
-from .client import Connection, ApiError, connect, unnest, options, markings, conversations, items, scale
+from .client import Connection, ApiError, BudgetExhausted, connect, unnest, options, markings, conversations, items, scale
 from .snapshots import Snapshot
 from .certificates import Verification, verify
+from .simulations import Simulation  # attaches components(), simulate(), … to Connection
 
-__all__ = ["connect", "Connection", "ApiError", "Snapshot", "unnest", "options", "markings", "conversations", "items", "scale",
-           "verify", "Verification"]
-__version__ = "0.9.0"
+__all__ = ["connect", "Connection", "ApiError", "BudgetExhausted", "Snapshot", "Simulation", "unnest", "options", "markings",
+           "conversations", "items", "scale", "verify", "Verification"]
+__version__ = "0.10.0"
