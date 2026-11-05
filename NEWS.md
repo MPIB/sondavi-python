@@ -1,3 +1,9 @@
+# sondavi 0.11.1
+
+* `unnest()` no longer makes a field of an empty row or entry. A dynamic matrix nobody filled in arrives as a list
+  of empty rows from SurveyJS 3.2.4 on, and a dynamic panel always kept its empty entries; both became fields like
+  `q.0` holding `{}`. Now they give no field at all, as in the R package.
+
 # sondavi 0.11.0
 
 ## The panel's columns

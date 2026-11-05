@@ -170,6 +170,10 @@ ok("the internal fields pass through untouched", flat["__locale"] == "default")
 # Raw is raw: the R package always kept these, this one dropped them.
 kept = unnest([{"q": {"row": {"col": 1}, "__note": "x"}}])[0]
 ok("a nested field starting with __ is kept", kept.get("q.__note") == "x" and kept.get("q.row.col") == 1)
+# Empty rows and entries: a dynamic matrix nobody touched arrives as [{}, {}] (SurveyJS 3.2.4), a dynamic panel
+# always kept its empty entries. They hold no answer and get no field, as in the R package.
+empty = unnest([{"md": [{}, {}, {}], "pd": [{}, {}]}, {"md": [{}, {"a": "x"}, {}], "pd": [{"x": "y"}, {}]}])
+ok("empty rows and entries get no field", empty[0] == {} and set(empty[1]) == {"md.1.a", "pd.0.x"})
 
 print("\nReverse-scored items")
 ok("without a codebook there is no reversed copy", "b5.worry_r" not in flat)

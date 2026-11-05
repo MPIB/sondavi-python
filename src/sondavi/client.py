@@ -20,7 +20,7 @@ from typing import Any, Iterator
 
 __all__ = ["connect", "Connection", "ApiError", "BudgetExhausted", "unnest", "markings"]
 
-_USER_AGENT = "sondavi-python/0.11.0"
+_USER_AGENT = "sondavi-python/0.11.1"
 
 # The platform's own timestamps, which every study carries. They arrive as wall-clock
 # strings without a zone ("2026-09-23 10:45:29"); left as text they sort lexically and
@@ -541,9 +541,14 @@ def _flatten_answer(value: Any, prefix: str) -> dict:
     # here, so the R package and this one disagreed about what an answer holds.
     flat: dict = {}
     for key, child in pairs:
+        # An empty row or entry holds no answer and gets no field, as in the R package: survey-core keeps the
+        # empty entries of a dynamic panel in the answer, and from SurveyJS 3.2.4 the empty rows of a dynamic
+        # matrix too, so an untouched one arrives as [{}, {}]. They used to become fields `q.0`, `q.1` holding {}.
+        if isinstance(child, (dict, list)) and not child:
+            continue
         flat.update(_flatten_answer(child, f"{prefix}.{key}"))
 
-    return flat or {prefix: value}
+    return flat
 
 
 def _is_option_list(value: Any) -> bool:
